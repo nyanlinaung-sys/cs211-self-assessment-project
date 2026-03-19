@@ -1,33 +1,73 @@
 import streamlit as st
 import pandas as pd
 import os
+import requests  # Required for Google Sheets sync
 from logic import load_questions, calculate_results, get_multi_label_prediction
 
 # --- CONFIGURATION ---
-DEV_MODE = True  # Set to True to pre-select correct answers and show skip button
+DEV_MODE = True  
+# Replace the ID below with your actual Google Form ID
+FORM_ID = "1Yj8KtJ-Nb4Yf856vC5tFXPIc6OXvkrxmzBWVRmCJNzY"
 
 st.set_page_config(page_title="CS211 Placement Test", page_icon="🧠", layout="wide")
 
 # 1. Initialize Session State
-if 'current_q' not in st.session_state:
+if 'quiz_started' not in st.session_state:
+    st.session_state.quiz_started = False
     st.session_state.current_q = 0 
     st.session_state.answers = []  
     st.session_state.quiz_complete = False
+    st.session_state.student_name = ""
+    st.session_state.student_id = ""
 
 questions = load_questions()
 total_questions = len(questions)
 
+# --- CLOUD SYNC FUNCTION ---
+def send_to_google_sheets(sid, name, score, status):
+    url = f"https://docs.google.com/forms/d/e/{FORM_ID}/formResponse"
+    # IMPORTANT: Replace these entry numbers with the ones from your 'Pre-filled link'
+    payload = {
+        "entry.1111111": sid,    # Student ID
+        "entry.2222222": name,   # Student Name
+        "entry.3333333": str(score), # Final Score
+        "entry.4444444": status  # Status
+    }
+    try:
+        requests.post(url, data=payload)
+    except Exception as e:
+        print(f"Cloud sync failed: {e}")
+
 st.title("CS211 Placement Test")
 st.subheader(f"Department of Computer Science, Bellevue College")
 
-# 2. Quiz Logic
-if not st.session_state.quiz_complete:
+# --- UI LOGIC ---
+
+# A. WELCOME SCREEN
+if not st.session_state.quiz_started:
+    with st.container(border=True):
+        st.markdown("### Candidate Registration")
+        st.write("Please enter your details to begin the assessment.")
+        sid_input = st.text_input("Student ID (8 digits):", placeholder="e.g., 20255500")
+        name_input = st.text_input("Full Name:", placeholder="First Last")
+        
+        if st.button("Start Quiz"):
+            if sid_input.strip() and name_input.strip():
+                st.session_state.student_id = sid_input
+                st.session_state.student_name = name_input
+                st.session_state.quiz_started = True
+                st.rerun()
+            else:
+                st.error("Both Student ID and Name are required.")
+
+# B. QUIZ LOGIC
+elif not st.session_state.quiz_complete:
     q_index = st.session_state.current_q
     q = questions[q_index]
 
+    st.write(f"Candidate: **{st.session_state.student_name}** ({st.session_state.student_id})")
     st.subheader(f"Question {q_index + 1} of {total_questions}")
     progress_val = q_index / total_questions
-    st.write(f"**Overall Progress: {int(progress_val * 100)}%**")
     st.progress(progress_val) 
 
     st.markdown(f"### {q['question']}")
@@ -46,32 +86,25 @@ if not st.session_state.quiz_complete:
         except ValueError:
             default_index = 0
 
-    user_choice = st.radio(
-        "Select your answer:", 
-        q["options"], 
-        index=default_index, 
-        key=f"q_{q_index}"
-    )
+    user_choice = st.radio("Select your answer:", q["options"], index=default_index, key=f"q_{q_index}")
     
     button_label = "Next Question" if q_index < total_questions - 1 else "Finish Quiz"
     
     if st.button(button_label):
-        if user_choice is None:
-            st.warning("Please select an answer!")
+        st.session_state.answers.append(user_choice)
+        if q_index < total_questions - 1:
+            st.session_state.current_q += 1
+            st.rerun() 
         else:
-            st.session_state.answers.append(user_choice)
-            if q_index < total_questions - 1:
-                st.session_state.current_q += 1
-                st.rerun() 
-            else:
-                st.session_state.quiz_complete = True
-                st.rerun()
+            st.session_state.quiz_complete = True
+            st.rerun()
 
-# 3. Results Page
+# C. RESULTS PAGE
 else:
-    # Unpack 4 values: Points (scaled to 10 max), Feedback, Cat Scores, and Passing Status
-    # logic.py now handles the complex group requirements
     points, feedback, cat_scores, status = calculate_results(st.session_state.answers, questions) 
+
+    # --- CLOUD SYNC TRIGGER ---
+    send_to_google_sheets(st.session_state.student_id, st.session_state.student_name, points, status)
 
     mapping = {
         'Basic: loop/ for-each': 'loops', 
@@ -84,94 +117,63 @@ else:
         'Java Collections Framework -HashMap': 'hashmap'
     }   
 
-    # Prepare data for AI (scaled 0-5 for existing model logic)
     row_data = {mapping[cat]: round((data['correct']/data['total'])*5) for cat, data in cat_scores.items() if cat in mapping}
 
-    with st.spinner("AI is determining all necessary study focus areas..."):
+    with st.spinner("AI is determining focus areas..."):
         recommended_plans = get_multi_label_prediction(row_data)
 
-    # Log to CSV
+    # Backup local CSV log (Note: On AWS App Runner, this file is temporary)
     save_data = row_data.copy()
-    for col_name in mapping.values():
-        is_target = 1 if (col_name in recommended_plans or (col_name in row_data and row_data[col_name] == 0)) else 0
-        save_data[f"T_{col_name}"] = is_target
+    save_data['student_id'] = st.session_state.student_id
+    save_data['name'] = st.session_state.student_name
 
     df_new_result = pd.DataFrame([save_data])
     csv_file = 'student_training_data.csv'
-    
     file_exists = os.path.exists(csv_file)
-    if file_exists:
-        with open(csv_file, 'a+') as f:
-            f.seek(0, os.SEEK_END)
-            if f.tell() > 0:
-                f.seek(f.tell() - 1)
-                if f.read(1) != '\n':
-                    f.write('\n')
     df_new_result.to_csv(csv_file, mode='a', index=False, header=not file_exists)
     
     # --- UI DISPLAY ---
-    # Points are displayed out of the new 80-point maximum
     st.header(f"Final Score: {points} / 80 Points")
     col1, col2 = st.columns([1, 1.2]) 
     
     with col1:
         st.subheader("Results by Category")
         for cat, data in cat_scores.items():
-            # Shows "X / Y Correct"
             st.write(f"**{cat}**: {data['correct']} / {data['total']} Correct")
             perc = (data['correct'] / data['total']) if data['total'] > 0 else 0
             st.progress(perc)
 
     with col2:
         st.subheader("Enrollment Status")
-
-        # Logic-based check from logic.py now accounts for all 3 groups
         if status == "Reject":
             st.error("### ❌ Status: REJECT")
-            st.warning("You do not currently meet the requirements for CS211.")
-            st.info("Assessment complete. Your results have been recorded for review.")
+            st.warning("You do not currently meet requirements for CS211.")
         else:
             if status == "Pass":
                 st.success("### ✅ Status: PASS")
                 st.balloons()
-            else: # status == "Advice"
+            else: 
                 st.warning("### ⚠️ Status: ADVICE")
-                st.write("You are eligible for enrollment, but targeted review is recommended.")
             
             st.write("---")
             st.subheader("AI Optimized Study Plan")
-            st.write("Focus on these areas to reach 100% mastery for CS211:")
-
             pretty_names = {
-                'loops': 'Iterative Structures (Loops)',
-                'methods': 'Method & Parameter Passing',
-                'logic': 'Boolean Logic & Zen',
-                'data_structs': 'Arrays & ArrayLists',
-                'classes': 'Object-Oriented Classes',
-                'inheritance': 'Inheritance & Interfaces',
-                'hashset': 'Java Collections: HashSet',
-                'hashmap': 'Java Collections: HashMap'
+                'loops': 'Iterative Structures', 'methods': 'Parameter Passing',
+                'logic': 'Boolean Zen', 'data_structs': 'Arrays/ArrayLists',
+                'classes': 'OO Classes', 'inheritance': 'Inheritance',
+                'hashset': 'HashSet', 'hashmap': 'HashMap'
             }
 
-            # Only show focus areas for categories that aren't 100% correct
-            areas_shown = 0
             for cat, data in cat_scores.items():
                 if data['correct'] < data['total']:
                     plan_id = mapping.get(cat)
                     display_title = pretty_names.get(plan_id, cat) # type: ignore
-                    
                     with st.container(border=True):
                         st.markdown(f"**Focus Area: {display_title}**")
-                        # Fetch tip from JSON questions
                         tip = next((q_obj['tip'] for q_obj in questions if q_obj['category'] == cat), "Review notes.")
                         st.info(f"💡 {tip}")
-                    areas_shown += 1
-            
-            if areas_shown == 0:
-                st.info("🌟 Perfect score! You are fully prepared for CS211.")
 
     if st.button("Restart Quiz"):
-        st.session_state.current_q = 0
-        st.session_state.answers = []
-        st.session_state.quiz_complete = False
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
         st.rerun()
