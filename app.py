@@ -24,8 +24,8 @@ total_questions = len(questions)
 
 # --- CLOUD SYNC FUNCTION ---
 def send_to_google_sheets(sid, name, score, status):
-    url = f"https://docs.google.com/forms/d/e/{FORM_ID}/formResponse"
-    # !!! IMPORTANT: Replace these entry numbers with your actual Google Form IDs !!!
+    url = f"https://docs.google.com/forms/d/e/1Yj8KtJ-Nb4Yf856vC5tFXPIc6OXvkrxmzBWVRmCJNzY/formResponse"
+    # !!! IMPORTANT: entry numbers with actual Google Form IDs !!!
     payload = {
         "entry.2042537524": sid,    # Student ID ID
         "entry.1764834092": name,   # Name ID
