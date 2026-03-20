@@ -4,6 +4,9 @@ import os
 import requests
 from logic import load_questions, calculate_results, get_multi_label_prediction
 
+# This helps debug if the app is even reaching this point
+print("App is starting up...")
+
 # --- 1. WEB DESIGN (CSS) ---
 st.set_page_config(page_title="CS211 Placement Test", page_icon="🧠", layout="wide")
 
