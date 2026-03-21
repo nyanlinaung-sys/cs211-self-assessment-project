@@ -4,6 +4,12 @@ import os
 import requests
 from logic import load_questions, calculate_results, get_multi_label_prediction
 
+# Force these settings before Streamlit even starts
+os.environ["STREAMLIT_SERVER_PORT"] = "8080"
+os.environ["STREAMLIT_SERVER_ADDRESS"] = "0.0.0.0"
+os.environ["STREAMLIT_GLOBAL_DEVELOPMENT_MODE"] = "false"
+os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
+
 # --- 1. WEB DESIGN (CSS) ---
 st.set_page_config(page_title="CS211 Placement Test", page_icon="🧠", layout="wide")
 
