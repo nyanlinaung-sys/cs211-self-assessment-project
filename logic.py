@@ -33,6 +33,7 @@ PASSING_CONFIG = {
 }
 
 def load_questions():
+    # Make sure questions.json is in your root GitHub folder
     with open('questions.json', 'r') as f:
         return json.load(f)
 
@@ -40,7 +41,6 @@ def check_passing_status(category_scores):
     all_groups_passed = True
     
     for group_name, rules in PASSING_CONFIG.items():
-        # Scale category 'correct' count to the 10-point scale (Correct * 2)
         group_points = [category_scores.get(cat, {"correct": 0})["correct"] * 2 for cat in rules["categories"]]
         
         if not all(p >= rules["abs_min"] for p in group_points):
@@ -57,7 +57,6 @@ def calculate_results(user_answers, questions):
     feedback = []
     category_scores = {}
     
-    # Initialize all categories from config to avoid KeyErrors
     for group in PASSING_CONFIG.values():
         for cat in group["categories"]:
             category_scores[cat] = {"correct": 0, "total": 0}
@@ -75,44 +74,49 @@ def calculate_results(user_answers, questions):
             else:
                 feedback.append({"category": cat, "tip": q['tip']})
                 
-    # total_points for internal logic (10-point scale)
-    total_points = raw_correct * 2
-    
-    # Scaling for the 80-point display on the UI
     display_points = int((raw_correct / len(questions)) * 80)
-    
     status = check_passing_status(category_scores)
     
     return display_points, feedback, category_scores, status
 
 def get_multi_label_prediction(row_data):
-    csv_file = 'student_training_data.csv'
+    # CHANGED: Use /tmp path for AWS compatibility
+    csv_file = '/tmp/student_training_data.csv'
+    
     feature_cols = [
-    "Basic: loop/ for-each", 
-    "Basic: Method/parameter passing", 
-    "Basic: If-else/Boolean zen", 
-    "Arrays/ArrayList",
-    "Classes", 
-    "Inheritance/interfaces", 
-    "Java Collections Framework -HashSet", 
-    "Java Collections Framework -HashMap"
+        "Basic: loop/ for-each", 
+        "Basic: Method/parameter passing", 
+        "Basic: If-else/Boolean zen", 
+        "Arrays/ArrayList",
+        "Classes", 
+        "Inheritance/interfaces", 
+        "Java Collections Framework -HashSet", 
+        "Java Collections Framework -HashMap"
     ]
     target_cols = [f"T_{col}" for col in feature_cols]
 
     try:
-        if not os.path.exists(csv_file):
+        # If the file doesn't exist yet or has no data, use fallback
+        if not os.path.exists(csv_file) or os.path.getsize(csv_file) < 100:
             return [cat for cat, score in row_data.items() if score < 6]
             
         df = pd.read_csv(csv_file)
+        
+        # Need at least 2 rows to train a model safely
+        if len(df) < 2:
+            return [cat for cat, score in row_data.items() if score < 6]
+
         X = df[feature_cols]
         y = df[target_cols]
 
         model = MultiOutputClassifier(DecisionTreeClassifier(criterion='entropy', max_depth=5))
-        model.fit(X, y) # type: ignore
+        model.fit(X, y) 
 
         current_input = pd.DataFrame([row_data])[feature_cols]
-        prediction = model.predict(current_input)[0] # type: ignore
+        prediction = model.predict(current_input)[0] 
         results = [feature_cols[i] for i, val in enumerate(prediction) if val == 1]
+        
         return results if results else ["General Review"]
     except Exception:
+        # Fallback logic if ML training fails
         return [cat for cat, score in row_data.items() if score < 6]
