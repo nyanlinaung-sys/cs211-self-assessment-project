@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
     software-properties-common \
     && rm -rf /var/lib/apt/lists/*
 
-# 4. Copy your requirements and install them
+# 4. Copy requirements and install them
 COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
@@ -22,4 +22,4 @@ COPY . .
 EXPOSE 8080
 
 # 7. The command to start your app
-ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8080", "--server.address=0.0.0.0"]
+CMD ["streamlit", "run", "app.py", "--server.port=8080", "--server.address=0.0.0.0"]
