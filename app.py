@@ -1,9 +1,15 @@
 import sys
 import os
 
-# 1. Force Port 8080 immediately
+# This is the line that solves your specific error:
+os.environ["STREAMLIT_GLOBAL_DEVELOPMENT_MODE"] = "false"
+
+# The rest of our standard AWS setup:
 os.environ["STREAMLIT_SERVER_PORT"] = "8080"
 os.environ["STREAMLIT_SERVER_ADDRESS"] = "0.0.0.0"
+os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
+os.environ["STREAMLIT_SERVER_ENABLE_CORS"] = "false"
+os.environ["STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION"] = "false"
 
 try:
     import pandas as pd
