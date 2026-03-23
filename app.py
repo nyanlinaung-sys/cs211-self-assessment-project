@@ -1,15 +1,12 @@
 import sys
 import os
 
-# This is the line that solves your specific error:
-os.environ["STREAMLIT_GLOBAL_DEVELOPMENT_MODE"] = "false"
-
-# The rest of our standard AWS setup:
-os.environ["STREAMLIT_SERVER_PORT"] = "8080"
-os.environ["STREAMLIT_SERVER_ADDRESS"] = "0.0.0.0"
-os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
+# Essential for AWS App Runner Websockets
 os.environ["STREAMLIT_SERVER_ENABLE_CORS"] = "false"
 os.environ["STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION"] = "false"
+os.environ["STREAMLIT_SERVER_ENABLE_WEBSOCKET_COMPRESSION"] = "false"
+os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
+os.environ["STREAMLIT_GLOBAL_DEVELOPMENT_MODE"] = "false"
 
 try:
     import pandas as pd
