@@ -1,55 +1,21 @@
 import os
-
-# Disable all security checks that block AWS App Runner proxies
-os.environ["STREAMLIT_SERVER_ENABLE_CORS"] = "false"
-os.environ["STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION"] = "false"
-os.environ["STREAMLIT_SERVER_ENABLE_WEBSOCKET_COMPRESSION"] = "false"
-os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
-os.environ["STREAMLIT_GLOBAL_DEVELOPMENT_MODE"] = "false"
-
-import sys
-
-try:
-    import pandas as pd
-    import requests
-    import streamlit as st
-    # Check if logic.py exists before importing
-    from logic import load_questions, calculate_results, get_multi_label_prediction
-except Exception as e:
-    print(f"CRITICAL ERROR DURING IMPORT: {e}")
-    sys.exit(1)
-
-st.set_page_config(page_title="CS211 Placement Test", layout="wide")
-
 import pandas as pd
 import requests
-import streamlit as st
+import json
+from fastapi import FastAPI, Request, Form
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+# Import from your logic.py
 from logic import load_questions, calculate_results, get_multi_label_prediction
 
-# --- 1. WEB DESIGN (CSS) ---
-st.set_page_config(page_title="CS211 Placement Test", page_icon="🧠", layout="wide")
+app = FastAPI()
 
-st.markdown("""
-    <style>
-    .block-container { padding-top: 2rem !important; padding-bottom: 0rem !important; }
-    .stApp { background-color: #F8FAFC; }
-    .main-header {
-        background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);
-        padding: 30px; border-radius: 15px; color: white;
-        text-align: center; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-    label, p, .stMarkdown { color: #1E293B !important; font-weight: 700 !important; margin-bottom: 2px !important; }
-    h3 { color: #1E3A8A !important; padding-top: 0px !important; margin-top: 0px !important; }
-    .stTextInput > div > div > input { background-color: white !important; color: #1E293B !important; border: 2px solid #E2E8F0 !important; border-radius: 8px !important; padding: 8px !important; }
-    [data-testid="stVerticalBlock"] { gap: 0.5rem !important; }
-    .stButton>button { background-color: #2563EB; color: white; border-radius: 8px; font-weight: bold; border: none; padding: 10px 25px; transition: 0.2s; }
-    .stButton>button:hover { background-color: #1D4ED8; transform: scale(1.02); color: white; }
-    </style>
-    """, unsafe_allow_html=True)
+# ROBUST PATHING: This ensures it finds the templates folder on both Mac and AWS
+base_dir = os.path.dirname(os.path.abspath(__file__))
+templates = Jinja2Templates(directory=os.path.join(base_dir, "templates"))
 
-# --- 2. CONFIGURATION ---
-FORM_ID = "1Yj8KtJ-Nb4Yf856vC5tFXPIc6OXvkrxmzBWVRmCJNzY"
-CSV_PATH = '/tmp/student_training_data.csv'  # Cloud-safe path
+# AWS-READY PATH: /tmp/ is the only writable directory on App Runner
+CSV_PATH = '/tmp/student_training_data.csv'
 
 FEATURE_COLS = [
     "Basic: loop/ for-each", "Basic: Method/parameter passing", 
@@ -57,119 +23,76 @@ FEATURE_COLS = [
     "Classes", "Inheritance/interfaces", 
     "Java Collections Framework -HashSet", "Java Collections Framework -HashMap"
 ]
-TARGET_COLS = [f"T_{c}" for c in FEATURE_COLS]
-ALL_TRAINING_COLS = FEATURE_COLS + TARGET_COLS
-
-if 'quiz_started' not in st.session_state:
-    st.session_state.update({
-        'quiz_started': False, 'current_q': 0, 'answers': [],
-        'quiz_complete': False, 'student_name': "", 'student_id': "", 'data_sent': False
-    })
-
-questions = load_questions()
-total_questions = len(questions)
 
 def send_to_google_sheets(sid, name, score, status):
+    """Sends student data to Google Forms/Sheets"""
     url = "https://docs.google.com/forms/d/e/1FAIpQLSeJjxjL3WoG6NODAhdFS_RVjdHN3KGsIdag9Y71fxsDytyZAQ/formResponse"
     payload = {
-        "entry.2042537524": sid, "entry.1764834092": name,
-        "entry.1723464832": str(score), "entry.1434025782": status  
+        "entry.2042537524": sid, 
+        "entry.1764834092": name,
+        "entry.1723464832": str(score), 
+        "entry.1434025782": status  
     }
     try:
-        r = requests.post(url, data=payload, timeout=5)
-        return r.status_code == 200
-    except:
-        return False
+        requests.post(url, data=payload, timeout=5)
+    except Exception as e:
+        print(f"Sheets Error: {e}")
 
-# --- UI LOGIC ---
-st.markdown('<div class="main-header"><h1>CS211 Placement Test</h1><p>Department of Computer Science, Bellevue College</p></div>', unsafe_allow_html=True)
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    return templates.TemplateResponse("register.html", {"request": request})
 
-if not st.session_state.quiz_started:
-    with st.container(border=True):
-        st.subheader("Candidate Registration")
-        sid_input = st.text_input("Student ID (8 digits):")
-        name_input = st.text_input("Full Name:")
-        if st.button("Start Assessment"):
-            if sid_input.strip() and name_input.strip():
-                st.session_state.student_id, st.session_state.student_name = sid_input, name_input
-                st.session_state.quiz_started = True
-                st.rerun()
-            else:
-                st.error("Please enter both ID and Name.")
+@app.post("/quiz", response_class=HTMLResponse)
+async def start_quiz(request: Request, sid: str = Form(...), name: str = Form(...)):
+    questions = load_questions()
+    return templates.TemplateResponse("quiz.html", {
+        "request": request, "sid": sid, "name": name, "questions": questions
+    })
 
-elif not st.session_state.quiz_complete:
-    q_index = st.session_state.current_q
-    q = questions[q_index]
-    st.write(f"Candidate: **{st.session_state.student_name}** ({st.session_state.student_id})")
-    st.subheader(f"Question {q_index + 1} of {total_questions}")
-    st.progress(q_index / total_questions) 
-    st.markdown(f"### {q['question']}")
-    
-    if q.get("image"):
-        try:
-            st.image(q["image"], caption="Analyze this code snippet", width=400)
-        except:
-            st.error("Image file not found.")
+@app.post("/submit", response_class=HTMLResponse)
+async def handle_submit(request: Request, sid: str = Form(...), name: str = Form(...)):
+    try:
+        form_data = await request.form()
+        questions = load_questions()
+        
+        # 1. Collect answers
+        user_answers = []
+        for q in questions:
+            # Matches name="q_{{ q.id }}" in your quiz.html
+            ans = form_data.get(f"q_{q['id']}")
+            user_answers.append(ans if ans else "")
+        
+        # 2. Run Logic
+        points, feedback, cat_scores, status = calculate_results(user_answers, questions)
+        
+        # 3. External integrations
+        send_to_google_sheets(sid, name, points, status)
+        
+        # 4. AI Recommendation Logic
+        row_data = {cat: cat_scores.get(cat, {'correct': 0})['correct'] * 2 for cat in FEATURE_COLS}
+        recommendations = get_multi_label_prediction(row_data)
 
-    # DEV_MODE REMOVED: index is now None (no default answer selected)
-    user_choice = st.radio("Select your answer:", q["options"], index=None, key=f"q_{q_index}")
-    
-    if st.button("Next Question" if q_index < total_questions - 1 else "Finish Quiz"):
-        if user_choice:
-            st.session_state.answers.append(user_choice)
-            if q_index < total_questions - 1:
-                st.session_state.current_q += 1
-            else:
-                st.session_state.quiz_complete = True
-            st.rerun()
-        else:
-            st.warning("Please select an answer before moving forward.")
-
-else:
-    points, feedback, cat_scores, status = calculate_results(st.session_state.answers, questions) 
-
-    if not st.session_state.data_sent:
-        if send_to_google_sheets(st.session_state.student_id, st.session_state.student_name, points, status):
-            st.session_state.data_sent = True
-            st.toast("Recorded in Cloud!", icon="✅")
-
-    row_data = {cat: cat_scores.get(cat, {'correct': 0})['correct'] * 2 for cat in FEATURE_COLS}
-    with st.spinner("AI analyzing focus areas..."):
-        recommended_plans = get_multi_label_prediction(row_data)
-
-    # CLOUD SAFE SAVE
-    training_dict = {cat: cat_scores.get(cat, {'correct': 0})['correct'] * 2 for cat in FEATURE_COLS}
-    for cat in FEATURE_COLS:
-        training_dict[f"T_{cat}"] = 1 if training_dict[cat] < 8 else 0
-
-    df_training = pd.DataFrame([training_dict], columns=ALL_TRAINING_COLS)
-    df_training.to_csv(CSV_PATH, mode='a', index=False, header=not os.path.exists(CSV_PATH))
-    
-    # UI Display
-    st.header(f"Final Score: {points} / 80")
-    col1, col2 = st.columns([1, 1.2]) 
-    with col1:
-        st.subheader("Category Breakdown")
+        # 5. Save training data to CSV
+        training_dict = {cat: row_data[cat] for cat in FEATURE_COLS}
         for cat in FEATURE_COLS:
-            data = cat_scores.get(cat, {'correct': 0, 'total': 0})
-            st.write(f"**{cat}**: {data['correct']} / {data['total']}")
-            st.progress(data['correct'] / data['total'] if data['total'] > 0 else 0)
+            training_dict[f"T_{cat}"] = 1 if training_dict[cat] < 8 else 0
+        
+        pd.DataFrame([training_dict]).to_csv(CSV_PATH, mode='a', index=False, header=not os.path.exists(CSV_PATH))
 
-    with col2:
-        st.subheader("Placement Result")
-        if status == "Reject":
-            st.error("Status: REJECT")
-        else:
-            st.success(f"Status: {status}")
-            st.write("---")
-            st.subheader("AI Study Recommendations")
-            for cat in FEATURE_COLS:
-                if cat_scores.get(cat, {'correct': 0})['correct'] < cat_scores.get(cat, {'total': 2})['total']:
-                    with st.container(border=True):
-                        st.markdown(f"**Focus: {cat}**")
-                        tip = next((q['tip'] for q in questions if q['category'] == cat), "Review core concepts.")
-                        st.info(f"💡 {tip}")
+        # 6. Show results
+        return templates.TemplateResponse("result.html", {
+            "request": request, 
+            "points": points, 
+            "status": status, 
+            "cat_scores": cat_scores,
+            "recommendations": recommendations
+        })
+        
+    except Exception as e:
+        print(f"CRITICAL ERROR: {e}")
+        return HTMLResponse(content=f"<html><body><h1>Error: {e}</h1><p>Check your terminal logs.</p></body></html>", status_code=500)
 
-    if st.button("Restart Quiz"):
-        st.session_state.clear()
-        st.rerun()
+if __name__ == "__main__":
+    import uvicorn
+    # Port 8080 is standard for AWS App Runner
+    uvicorn.run(app, host="0.0.0.0", port=8080)
