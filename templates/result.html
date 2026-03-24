@@ -5,49 +5,91 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #F8FAFC; color: #1E293B; }
-        .result-header {
-            background: linear-gradient(135deg, #1E3A8A 0%, #3B82F6 100%);
-            padding: 40px; border-radius: 15px; color: white; text-align: center; margin-top: 2rem;
-        }
-        .status-pass { color: #10B981; font-weight: 800; }
-        .status-reject { color: #EF4444; font-weight: 800; }
-        .recommendation-card { border-left: 5px solid #3B82F6; margin-bottom: 10px; padding: 15px; background: white; border-radius: 8px; }
+        .result-header { padding: 40px; border-radius: 15px; color: white; text-align: center; margin-top: 2rem; }
+        .bg-pass { background: linear-gradient(135deg, #059669 0%, #10B981 100%); }
+        .bg-reject { background: linear-gradient(135deg, #991B1B 0%, #EF4444 100%); }
+        .bg-review { background: linear-gradient(135deg, #B45309 0%, #F59E0B 100%); }
+        
+        .suggestion-card { border-left: 5px solid #3B82F6; padding: 20px; background: white; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .relevance-badge { background-color: #DBEAFE; color: #1E40AF; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; margin-right: 5px; }
     </style>
 </head>
 <body class="container pb-5">
-    <div class="result-header shadow">
+    <div class="result-header shadow {% if status == 'Pass' %}bg-pass{% elif status == 'Reject' %}bg-reject{% else %}bg-review{% endif %}">
         <h1>Final Score: {{ points }} / 80</h1>
-        <h2 class="{{ 'status-reject' if status == 'Reject' else 'status-pass' }}">
-            Status: {{ status }}
-        </h2>
+        <h2>Status: {{ status }}</h2>
     </div>
 
-    <div class="row mt-4">
-        <div class="col-md-6">
-            <h3>Category Breakdown</h3>
+    <div class="row mt-5">
+        <div class="col-md-5">
+            <h3 class="mb-4">Category Scores</h3>
             {% for cat, score in cat_scores.items() %}
             <div class="mb-3">
-                <label><strong>{{ cat }}</strong>: {{ score.correct }} / {{ score.total }}</label>
-                <div class="progress">
-                    <div class="progress-bar bg-info" style="width: {{ (score.correct / score.total) * 100 }}%"></div>
+                <div class="d-flex justify-content-between">
+                    <strong>{{ cat }}</strong>
+                    <span>{{ score.correct }}/{{ score.total }}</span>
+                </div>
+                <div class="progress" style="height: 10px;">
+                    <div class="progress-bar bg-primary" style="width: {{ (score.correct / score.total) * 100 if score.total > 0 else 0 }}%"></div>
                 </div>
             </div>
             {% endfor %}
         </div>
-        
-        <div class="col-md-6">
-            <h3>AI Study Recommendations</h3>
-            {% if recommendations %}
-                {% for rec in recommendations %}
-                <div class="recommendation-card shadow-sm">
-                    <h5>Focus: {{ rec }}</h5>
-                    <p class="mb-0"><em>💡 Review core concepts and practice implementation.</em></p>
+
+        <div class="col-md-7">
+            <h3>CS211 Preparation Roadmap</h3>
+
+            {% if status == "Reject" %}
+                <div class="alert alert-secondary mt-3">
+                    <p class="mb-0">Please review core Java fundamentals. No specific roadmap is generated for this result status.</p>
                 </div>
-                {% endfor %}
+            {% elif points == 80 %}
+                <div class="alert alert-success mt-3">
+                    <h4>🌟 Mastery Achieved</h4>
+                    <p>You have a strong foundation for all CS211 chapters!</p>
+                </div>
             {% else %}
-                <p>Great job! No specific focus areas identified.</p>
+                <p class="text-muted mb-4">You passed! However, to succeed in <strong>CS211</strong>, you must strengthen these areas because of their high importance in the upcoming curriculum:</p>
+                
+                {% for cat, score in cat_scores.items() %}
+                    {% if score.correct < score.total %}
+                    <div class="suggestion-card">
+                        <h5 class="text-primary">Focus Area: {{ cat }}</h5>
+                        
+                        <p class="mt-2 mb-1"><strong>Why this is critical for CS211:</strong></p>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% if cat == "Basic: loop/ for-each" %}
+                                <span class="relevance-badge">Ch09 Review (High)</span>
+                                <span class="relevance-badge">Ch12 Recursion (High)</span>
+                                <span class="relevance-badge">Ch13 Search/Complexity (High)</span>
+                            {% elif cat == "Basic: Method/parameter passing" %}
+                                <span class="relevance-badge">Ch12 Recursion (High)</span>
+                                <span class="relevance-badge">Ch17 Binary Trees (Med)</span>
+                            {% elif cat == "Basic: If-else/Boolean zen" %}
+                                <span class="relevance-badge">Ch12 Recursion (High)</span>
+                                <span class="relevance-badge">Ch13 Search (High)</span>
+                                <span class="relevance-badge">Ch18 Hashing (Med)</span>
+                            {% elif cat == "Arrays/ArrayList" %}
+                                <span class="relevance-badge">Ch14 Stacks/Queues (High)</span>
+                                <span class="relevance-badge">Ch17 Binary Trees (High)</span>
+                                <span class="relevance-badge">Ch18 Hashing (High)</span>
+                            {% elif cat == "Classes" or cat == "Inheritance/interfaces" %}
+                                <span class="relevance-badge">Ch09 Review (High)</span>
+                                <span class="relevance-badge">All Chapters (Fundamental)</span>
+                            {% elif cat == "Java Collections Framework -HashSet" or cat == "Java Collections Framework -HashMap" %}
+                                <span class="relevance-badge">Ch13 Search (High)</span>
+                                <span class="relevance-badge">Ch18 Hashing (High)</span>
+                            {% endif %}
+                        </div>
+                        <p class="small text-muted mt-3">Missing points here will make advanced topics like <em>Complexity Analysis</em> and <em>Tree Traversal</em> significantly more difficult.</p>
+                    </div>
+                    {% endif %}
+                {% endfor %}
             {% endif %}
-            <a href="/" class="btn btn-primary mt-4 w-100">Restart Assessment</a>
+
+            <div class="mt-4">
+                <a href="/" class="btn btn-outline-primary w-100">Back to Home</a>
+            </div>
         </div>
     </div>
 </body>

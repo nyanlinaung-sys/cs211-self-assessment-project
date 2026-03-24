@@ -85,7 +85,8 @@ async def handle_submit(request: Request, sid: str = Form(...), name: str = Form
             "points": points, 
             "status": status, 
             "cat_scores": cat_scores,
-            "recommendations": recommendations
+            "recommendations": recommendations,
+            "feedback": feedback  # <--- ADD THIS LINE
         })
         
     except Exception as e:

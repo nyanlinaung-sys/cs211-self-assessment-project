@@ -59,8 +59,9 @@ def check_passing_status(category_scores):
 
 def calculate_results(user_answers, questions):
     raw_correct = 0
-    feedback = []
-    # Initialize scores for all categories defined in PASSING_CONFIG
+    # We will use this to store which categories didn't get 100%
+    needs_review = []
+    
     category_scores = {}
     for group in PASSING_CONFIG.values():
         for cat in group["categories"]:
@@ -71,18 +72,20 @@ def calculate_results(user_answers, questions):
         if cat in category_scores:
             category_scores[cat]["total"] += 1
             
-        # Check if user answer matches JSON answer
-        # Note: FastAPI form data might send None if unanswered, handled here
         if i < len(user_answers) and user_answers[i] == q['answer']:
             raw_correct += 1
             category_scores[cat]["correct"] += 1
-        else:
-            feedback.append({"category": cat, "tip": q.get('tip', 'Review this topic.')})
+
+    # Logic: If they didn't get the 'total' amount correct, add to review list
+    for cat, score in category_scores.items():
+        if score["correct"] < score["total"]:
+            needs_review.append(cat)
                 
-    # Score out of 80 (40 questions * 2 points)
     display_points = int(raw_correct * 2)
     status = check_passing_status(category_scores)
-    return display_points, feedback, category_scores, status
+    
+    # We return needs_review instead of the old feedback list
+    return display_points, needs_review, category_scores, status
 
 def get_multi_label_prediction(row_data):
     """Predicts focus areas using ML with your CSV fallback."""
