@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Instructor Analytics</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .stats-card { background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .filter-bg { background: #2d3436; color: white; border-radius: 12px; padding: 20px; margin-bottom: 30px; }
+    </style>
+</head>
+<body class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Dashboard: Prof. {{ selections.prof }}</h2>
+        <div>
+            <span class="badge bg-primary fs-6">Students Filtered: {{ total_students }}</span>
+            <a href="/login" class="btn btn-outline-danger btn-sm ms-3">Logout</a>
+        </div>
+    </div>
+
+    <div class="filter-bg shadow">
+        <form action="/dashboard" method="get" class="row g-2">
+            <input type="hidden" name="prof_f" value="{{ selections.prof }}">
+            <input type="hidden" name="key" value="{{ selections.key }}">
+
+            <div class="col-md-3">
+                <label class="small text-uppercase fw-bold">Session</label>
+                <select name="sess_f" class="form-select">
+                    <option value="">All Sessions</option>
+                    {% for s in filters.sessions %}<option value="{{s}}" {% if s == selections.sess %}selected{% endif %}>{{s}}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="small text-uppercase fw-bold">Quarter</label>
+                <select name="qtr_f" class="form-select">
+                    <option value="">All Quarters</option>
+                    {% for q in filters.quarters %}<option value="{{q}}" {% if q == selections.qtr %}selected{% endif %}>{{q}}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="small text-uppercase fw-bold">Year</label>
+                <select name="yr_f" class="form-select">
+                    <option value="">All Years</option>
+                    {% for y in filters.years %}<option value="{{y}}" {% if y == selections.yr %}selected{% endif %}>{{y}}</option>{% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100 fw-bold">Update Analytics</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="stats-card">
+                <h5 class="mb-4">Average Category Mastery</h5>
+                <canvas id="resultsChart"></canvas>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="stats-card">
+                <h5 class="mb-3">Recent Submissions</h5>
+                <table class="table table-sm">
+                    <thead><tr><th>Name</th><th>Score</th></tr></thead>
+                    <tbody>
+                        {% for student in recent %}
+                        <tr>
+                            <td>{{ student.Student_Name }}</td>
+                            <td><span class="badge bg-light text-dark border">{{ student.Total_Score }}/80</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="2" class="text-muted small">No recent activity</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('resultsChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: {{ averages.keys() | list | tojson }},
+                datasets: [{
+                    label: 'Class Average',
+                    data: {{ averages.values() | list | tojson }},
+                    backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                    borderColor: '#2980b9',
+                    borderWidth: 1
+                }]
+            },
+            options: { scales: { y: { beginAtZero: true, max: 10 } } }
+        });
+    </script>
+</body>
+</html>

@@ -51,39 +51,41 @@
             {% else %}
                 <p class="text-muted mb-4">You passed! However, to succeed in <strong>CS211</strong>, you must strengthen these areas because of their high importance in the upcoming curriculum:</p>
                 
-                {% for cat, score in cat_scores.items() %}
-                    {% if score.correct < score.total %}
+                {% for rec in recommendations %}
                     <div class="suggestion-card">
-                        <h5 class="text-primary">Focus Area: {{ cat }}</h5>
+                        <h5 class="text-primary">Focus Area: {{ rec.topic }}</h5>
                         
                         <p class="mt-2 mb-1"><strong>Why this is critical for CS211:</strong></p>
-                        <div class="d-flex flex-wrap gap-1">
-                            {% if cat == "Basic: loop/ for-each" %}
+                        <div class="d-flex flex-wrap gap-1 mb-3">
+                            {% if rec.topic == "Basic: loop/ for-each" %}
                                 <span class="relevance-badge">Ch09 Review (High)</span>
                                 <span class="relevance-badge">Ch12 Recursion (High)</span>
                                 <span class="relevance-badge">Ch13 Search/Complexity (High)</span>
-                            {% elif cat == "Basic: Method/parameter passing" %}
+                            {% elif rec.topic == "Basic: Method/parameter passing" %}
                                 <span class="relevance-badge">Ch12 Recursion (High)</span>
                                 <span class="relevance-badge">Ch17 Binary Trees (Med)</span>
-                            {% elif cat == "Basic: If-else/Boolean zen" %}
+                            {% elif rec.topic == "Basic: If-else/Boolean zen" %}
                                 <span class="relevance-badge">Ch12 Recursion (High)</span>
                                 <span class="relevance-badge">Ch13 Search (High)</span>
                                 <span class="relevance-badge">Ch18 Hashing (Med)</span>
-                            {% elif cat == "Arrays/ArrayList" %}
+                            {% elif rec.topic == "Arrays/ArrayList" %}
                                 <span class="relevance-badge">Ch14 Stacks/Queues (High)</span>
                                 <span class="relevance-badge">Ch17 Binary Trees (High)</span>
                                 <span class="relevance-badge">Ch18 Hashing (High)</span>
-                            {% elif cat == "Classes" or cat == "Inheritance/interfaces" %}
+                            {% elif rec.topic == "Classes" or rec.topic == "Inheritance/interfaces" %}
                                 <span class="relevance-badge">Ch09 Review (High)</span>
                                 <span class="relevance-badge">All Chapters (Fundamental)</span>
-                            {% elif cat == "Java Collections Framework -HashSet" or cat == "Java Collections Framework -HashMap" %}
+                            {% elif rec.topic == "Java Collections Framework -HashSet" or rec.topic == "Java Collections Framework -HashMap" %}
                                 <span class="relevance-badge">Ch13 Search (High)</span>
                                 <span class="relevance-badge">Ch18 Hashing (High)</span>
                             {% endif %}
                         </div>
-                        <p class="small text-muted mt-3">Missing points here will make advanced topics like <em>Complexity Analysis</em> and <em>Tree Traversal</em> significantly more difficult.</p>
+
+                        <p class="text-dark border-top pt-2" style="font-size: 0.95rem;">
+                            <i class="bi bi-info-circle text-primary"></i> 
+                            {{ rec.summary }}
+                        </p>
                     </div>
-                    {% endif %}
                 {% endfor %}
             {% endif %}
 

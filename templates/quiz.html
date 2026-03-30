@@ -19,6 +19,10 @@
         <form id="quizForm" action="/submit" method="post">
             <input type="hidden" name="sid" value="{{ sid }}">
             <input type="hidden" name="name" value="{{ name }}">
+            <input type="hidden" name="professor" value="{{ professor }}">
+            <input type="hidden" name="session" value="{{ session }}">
+            <input type="hidden" name="quarter" value="{{ quarter }}">
+            <input type="hidden" name="year" value="{{ year }}">
 
             {% for q in questions %}
             <div class="q-card shadow-sm" id="step-{{ loop.index0 }}">

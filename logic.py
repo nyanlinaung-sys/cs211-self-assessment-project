@@ -4,14 +4,14 @@ import os
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.multioutput import MultiOutputClassifier
 
-# Keep your exact passing logic
+# Keep exact passing logic
 PASSING_CONFIG = {
     "Group_1_4": {
         "categories": [
             "Basic: loop/ for-each", "Basic: Method/parameter passing", 
             "Basic: If-else/Boolean zen", "Arrays/ArrayList"
         ],
-        "abs_min": 4,          
+        "abs_min": 4,         
         "pass_min": 6,         
         "min_pass_count": 3    
     },
@@ -29,8 +29,20 @@ PASSING_CONFIG = {
     }
 }
 
+# --- AI-Style Summaries for the Roadmap ---
+CHAPTER_INSIGHTS = {
+    "Basic: loop/ for-each": "Mastering iteration is a core requirement for Ch09 Review, Ch12 Recursion, and Ch13 Complexity Analysis.",
+    "Basic: Method/parameter passing": "Call-stack and parameter logic are the foundation for Ch12 Recursion and Ch17 Binary Trees.",
+    "Java Collections Framework -HashSet": "Understanding Set mechanics is critical for succeeding in Ch13 Search and Ch18 Hashing.",
+    "Arrays/ArrayList": "Efficient array manipulation is a prerequisite for Ch13 Searching and Ch19 Sorting algorithms.",
+    "Classes": "Object references and memory allocation are essential for Ch17 Binary Trees and Ch10 Collections.",
+    "Inheritance/interfaces": "Polymorphism is the core requirement for understanding Ch10 and Ch11 of the Collections Framework.",
+    "Java Collections Framework -HashMap": "Key-value pair logic is the direct precursor to Ch18 Hashing and Map implementations.",
+    "Basic: If-else/Boolean zen": "Boolean logic and conditional flow are vital for Ch12 Recursion and Ch13 Search/Complexity logic."
+}
+
 def load_questions():
-    """Standard JSON loader (No Streamlit decorators)"""
+    """Standard JSON loader"""
     base_path = os.path.dirname(__file__)
     file_path = os.path.join(base_path, 'questions.json')
     try:
@@ -43,14 +55,11 @@ def load_questions():
 def check_passing_status(category_scores):
     all_groups_passed = True
     for group_name, rules in PASSING_CONFIG.items():
-        # Calculate points for each category in the group
         group_points = [category_scores.get(cat, {"correct": 0})["correct"] * 2 for cat in rules["categories"]]
         
-        # Absolute minimum check (Reject if any category is too low)
         if not all(p >= rules["abs_min"] for p in group_points):
             return "Reject"
             
-        # High score check (Must have X number of categories above pass_min)
         high_scores = sum(1 for p in group_points if p >= rules["pass_min"])
         if high_scores < rules["min_pass_count"]:
             all_groups_passed = False 
@@ -59,7 +68,6 @@ def check_passing_status(category_scores):
 
 def calculate_results(user_answers, questions):
     raw_correct = 0
-    # We will use this to store which categories didn't get 100%
     needs_review = []
     
     category_scores = {}
@@ -76,7 +84,6 @@ def calculate_results(user_answers, questions):
             raw_correct += 1
             category_scores[cat]["correct"] += 1
 
-    # Logic: If they didn't get the 'total' amount correct, add to review list
     for cat, score in category_scores.items():
         if score["correct"] < score["total"]:
             needs_review.append(cat)
@@ -84,22 +91,27 @@ def calculate_results(user_answers, questions):
     display_points = int(raw_correct * 2)
     status = check_passing_status(category_scores)
     
-    # We return needs_review instead of the old feedback list
     return display_points, needs_review, category_scores, status
 
 def get_multi_label_prediction(row_data):
-    """Predicts focus areas using ML with your CSV fallback."""
+    """Predicts focus areas using ML with matched threshold logic."""
     csv_file = '/tmp/student_training_data.csv'
-    feature_cols = list(row_data.keys())
+    feature_cols = [
+        "Basic: loop/ for-each", "Basic: Method/parameter passing", 
+        "Basic: If-else/Boolean zen", "Arrays/ArrayList",
+        "Classes", "Inheritance/interfaces", 
+        "Java Collections Framework -HashSet", "Java Collections Framework -HashMap"
+    ]
     target_cols = [f"T_{col}" for col in feature_cols]
 
     try:
+        # Threshold 8 matches the training target logic in app.py
         if not os.path.exists(csv_file) or os.path.getsize(csv_file) < 500:
-            return [cat for cat, score in row_data.items() if score < 6]
+            return [cat for cat in feature_cols if row_data.get(cat, 0) < 8]
             
         df = pd.read_csv(csv_file)
         if len(df) < 5: 
-            return [cat for cat, score in row_data.items() if score < 6]
+            return [cat for cat in feature_cols if row_data.get(cat, 0) < 8]
 
         X, y = df[feature_cols], df[target_cols]
         model = MultiOutputClassifier(DecisionTreeClassifier(max_depth=5))
@@ -109,4 +121,4 @@ def get_multi_label_prediction(row_data):
         prediction = model.predict(current_input)[0] # type: ignore
         return [feature_cols[i] for i, val in enumerate(prediction) if val == 1]
     except Exception:
-        return [cat for cat, score in row_data.items() if score < 6]
+        return [cat for cat in feature_cols if row_data.get(cat, 0) < 8]

@@ -1,0 +1,13 @@
+Professor,Session,Quarter,Year,Total_Score,Student_Name,Basic: loop/ for-each,Basic: Method/parameter passing,Basic: If-else/Boolean zen,Arrays/ArrayList,Classes,Inheritance/interfaces,Java Collections Framework -HashSet,Java Collections Framework -HashMap
+Taesik Kim,2,Spring,2026,56,Yuna Kim,6,2,6,6,10,10,6,10
+Taesik Kim,1,Fall,2025,64,Alice Park,10,8,8,8,8,6,4,4
+Taesik Kim,1,Fall,2025,42,Bob Smith,4,2,4,6,6,8,10,2
+Taesik Kim,1,Fall,2025,70,Charlie Day,10,10,10,8,10,6,8,8
+Taesik Kim,2,Winter,2026,50,David Cho,2,6,4,10,4,8,8,8
+Taesik Kim,2,Winter,2026,76,Eve Adams,10,10,10,10,8,10,8,10
+Taesik Kim,2,Winter,2026,38,Frank Lee,4,4,2,4,6,6,6,6
+Taesik Kim,3,Spring,2026,58,Grace Ho,8,8,6,4,10,10,4,8
+Taesik Kim,3,Spring,2026,62,Henry Oh,6,6,8,8,10,8,10,6
+Taesik Kim,3,Spring,2026,48,Ivy Chen,4,4,6,6,8,8,6,6
+Taesik Kim,3,Summer,2026,46,Hyna Kim,4,8,8,6,6,4,4,6
+Taesik Kim,2,Summer,2026,50,Park Young,6,6,8,4,6,4,8,8

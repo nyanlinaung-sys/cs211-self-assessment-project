@@ -1,56 +1,30 @@
 CS211 Placement Test Project
 Bellevue College - Computer Science Department
-This is a production-grade web application designed to assess student readiness for the CS211 course. Originally conceived in Streamlit, the project was migrated to FastAPI to support containerized cloud deployment and provide a more robust, asynchronous architecture for student assessments.
+This is a production-grade web application designed to assess student readiness for the CS211 course. The project utilizes a FastAPI backend to provide a robust, asynchronous architecture for student assessments and real-time instructor analytics.
 
 🚀 Features
-Registration: Securely collects Student ID and Name via FastAPI forms.
-
-Multi-Step Assessment: Interactive quiz covering Java fundamentals including Loops, OOP, Collections, and Interfaces.
-
-CS211 Roadmap: A custom logic engine that maps student performance directly to upcoming CS211 chapters (Recursion, Stacks, Trees, etc.) based on a curriculum correlation matrix.
-
-AI Study Recommendations: Utilizes a Multi-Output Decision Tree to identify specific mastery gaps and predict future focus areas.
-
-Cloud Synchronization: Automatically logs results to a Google Sheet via Google Forms API integration for instructor review.
-
-Responsive UI: A clean, mobile-friendly interface built with Bootstrap 5 and Jinja2 templating.
+Secure Registration: Collects Student ID, Name, and specific course metadata (Professor, Session, Quarter, Year).
+Multi-Step Assessment: Interactive quiz covering 8 core Java categories including Loops, OOP, Collections, and Interfaces.
+AI Study Recommendations: Utilizes a Multi-Output Decision Tree Classifier to identify mastery gaps and predict focus areas in upcoming CS211 chapters (Recursion, Stacks, Trees, etc.).
+Instructor Dashboard: A secured analytics portal where professors can log in to view class averages, filter by quarter/session, and track recent submissions.
+Dual-Layer Data Persistence: * Local/Cloud CSV: High-speed data logging for the ML model and Dashboard.
+Google Sheets Sync: Automatic backup via Google Forms API to ensure data is never lost, even if the cloud server restarts.
 
 🛠️ Technical Stack
 Backend: FastAPI (Python 3.x)
+Frontend: Jinja2 Templates, Bootstrap 5, Chart.js
+Machine Learning: Scikit-learn (Decision Tree), Pandas
+Deployment: AWS App Runner (Containerized)
 
-Frontend: Jinja2 Templates, HTML5, Bootstrap 5
-
-Machine Learning: Scikit-learn (Decision Tree Classifier), Pandas
-
-Deployment: Containerized on AWS App Runner with Continuous Deployment from GitHub.
-
-🧠 How It Works: The Assessment & AI Logic
-The application evaluates student readiness through a dual-layered analysis:
-
-1. The Grading Engine
-The system processes 40 questions across 8 core Java categories. It uses Grouped Passing Logic:
-
-Strict Minimums: Students must meet an absolute minimum score in each category to avoid a "Reject" status.
-
-Mastery Thresholds: To "Pass," students must achieve high-mastery scores in a specific number of categories within each logical group (e.g., Basic Syntax, OOP, and Collections).
-
-Dynamic Status: Outputs a status of Pass, Pass with Review, or Reject.
-
-2. Predictive Recommendations
-The project implements a Multi-Output Decision Tree Classifier:
-
-Feature Mapping: Student scores are compared against historical performance data.
-
-CS211 Correlation: If a student passes but has sub-perfect scores, the AI identifies which specific upcoming CS211 chapters (like Ch12 Recursion or Ch17 Binary Trees) will be most challenging based on their current gaps.
+📊 Instructor Dashboard & Security
+The dashboard is protected by a login system defined in app.py. Professors can access filtered analytics specific to their own students.
+Login Route: /login
+Features: Real-time bar charts of category mastery and a "Recent Submissions" table.
+Filtering: Robust filtering logic that handles data type mismatches and case sensitivity for Sessions, Quarters, and Years.
 
 💻 Local Setup
 Clone the repository.
 
-Create a virtual environment:
-
-Bash
-python3 -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
 Install dependencies:
 
 Bash
@@ -58,10 +32,21 @@ pip install -r requirements.txt
 Run the application:
 
 Bash
-python3 app.py
-Access the app: Open http://localhost:8080 in your browser.
+python app.py
+Access the app: * Student Quiz: http://localhost:8080/
 
-📦 Deployment
-This app is configured for high-availability deployment on AWS App Runner. It is linked to the main branch for automatic builds and deployments.
+Instructor Login: http://localhost:8080/login
 
-Migration Note: This project was transitioned from Streamlit to FastAPI to overcome deployment limitations and to provide a professional, scalable web architecture suitable for departmental use.
+📦 AWS Deployment Notes (CRITICAL)
+This application is configured for AWS App Runner. Because AWS App Runner uses a stateless file system:
+
+Storage: All CSV files are stored in the /tmp/ directory.
+Persistence: Files in /tmp/ are deleted when the service restarts.
+Recovery: The Google Sheets Backup is the "Source of Truth." If the dashboard appears empty after a deployment, data can be exported from Google Sheets and re-uploaded as dashboard_analytics.csv to restore the charts.
+Uvicorn: The app is configured to bind to 0.0.0.0 on port 8080 for AWS compatibility.
+
+Summary of what I updated:
+Dashboard Section: Added details about the new /login flow and Chart.js integration.
+Data Logic: Explained the Dual-CSV system (one for ML, one for Metadata).
+Robustness: Mentioned the new filtering logic that prevents the "0 students found" error.
+AWS Instructions: Added a specific warning about the /tmp/ folder so your professor knows why Google Sheets is important.
