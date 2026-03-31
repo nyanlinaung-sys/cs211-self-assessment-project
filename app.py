@@ -1,14 +1,15 @@
 import os
 import pandas as pd
 import requests
-import json
 import mysql.connector
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse , RedirectResponse
 from fastapi.templating import Jinja2Templates
 from logic import load_questions, calculate_results, get_multi_label_prediction, CHAPTER_INSIGHTS
+from starlette.middleware.sessions import SessionMiddleware
 
 app = FastAPI()
+app.add_middleware(SessionMiddleware, secret_key="4bd2d0080b61c894776d980296eb1b5871405aec5990e65b")
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(base_dir, "templates"))
@@ -173,15 +174,26 @@ async def login_page(request: Request):
 
 # THIS HANDLES THE BUTTON CLICK (POST)
 @app.post("/login")
-async def login_submit(professor: str = Form(...), key: str = Form(...)):
-    return RedirectResponse(url=f"/dashboard?prof_f={professor}&key={key}", status_code=303)
+async def login_submit(request: Request, professor: str = Form(...), key: str = Form(...)):
+    # Verify the password first
+    if professor in PROFESSOR_KEYS and PROFESSOR_KEYS[professor] == key:
+        # Save info to the session cookie (hidden from the URL)
+        request.session["user"] = professor
+        return RedirectResponse(url="/dashboard", status_code=303)
+    
+    return HTMLResponse(content="<h1>Access Denied</h1>", status_code=403)
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(
-    request: Request, prof_f: str = None, key: str = None, sess_f: str = None, qtr_f: str = None, yr_f: str = None  # type: ignore
-):
-    if not prof_f or prof_f not in PROFESSOR_KEYS or PROFESSOR_KEYS[prof_f] != key:
-        return HTMLResponse(content="<h1>Access Denied</h1>", status_code=403)
+async def dashboard(request: Request):
+    # Check if the user is logged in via the session
+    prof_f = request.session.get("user")
+    
+    sess_f = request.query_params.get("sess_f")
+    qtr_f = request.query_params.get("qtr_f")
+    yr_f = request.query_params.get("yr_f")
+    
+    if not prof_f or prof_f not in PROFESSOR_KEYS:
+        return RedirectResponse(url="/login") # Send them back to login if not authorized
 
     try:
         conn = get_db_connection()
@@ -219,7 +231,7 @@ async def dashboard(
         
         return templates.TemplateResponse("admin.html", {
             "request": request, "filters": filters, "averages": averages, "recent": recent_students,
-            "selections": {"prof": prof_f, "key": key, "sess": sess_f, "qtr": qtr_f, "yr": yr_f},
+            "selections": {"prof": prof_f, "sess": sess_f, "qtr": qtr_f, "yr": yr_f},
             "total_students": len(df)
         })
     except Exception as e:
