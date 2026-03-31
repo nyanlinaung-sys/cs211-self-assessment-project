@@ -119,13 +119,13 @@ def get_multi_label_prediction(row_data):
         df = pd.read_sql(query, db)
         db.close()
 
-        # 3. If we don't have enough data yet (e.g., < 10 students), use the 8-point rule
+        # 3. If we don't have enough data yet (e.g., < 10 students), use the 10-point rule
         if len(df) < 10:
-            return [cat for cat in feature_cols if row_data.get(cat, 0) < 8]
+            return [cat for cat in feature_cols if row_data.get(cat, 0) < 10]
 
         # 4. Prepare targets (AI needs 0 or 1 for training)
         for col in feature_cols:
-            df[f"T_{col}"] = (df[col] < 8).astype(int)
+            df[f"T_{col}"] = (df[col] < 10).astype(int)
 
         # 5. Train the AI Model
         X, y = df[feature_cols], df[target_cols]

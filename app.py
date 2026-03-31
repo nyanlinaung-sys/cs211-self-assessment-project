@@ -6,19 +6,15 @@ import mysql.connector
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-# Import from logic.py
 from logic import load_questions, calculate_results, get_multi_label_prediction, CHAPTER_INSIGHTS
 
 app = FastAPI()
 
-# ROBUST PATHING
 base_dir = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(base_dir, "templates"))
 
-# --- SETTINGS FOR AWS DEPLOYMENT ---
-CSV_PATH = '/tmp/student_training_data.csv'   # Strictly for ML Training (logic.py needs this)
+CSV_PATH = '/tmp/student_training_data.csv'
 
-# SECURITY KEYS
 PROFESSOR_KEYS = {
     "Taesik Kim": "pass123",
 }
@@ -31,7 +27,6 @@ FEATURE_COLS = [
 ]
 
 def get_db_connection():
-    """Connects to AWS RDS using environment variables"""
     return mysql.connector.connect(
         host=os.getenv("DB_HOST"),
         user=os.getenv("DB_USER"),
@@ -40,7 +35,6 @@ def get_db_connection():
     )
 
 def send_to_google_sheets(sid, name, score, status, professor, session, quarter, year):
-    """Sends student data to Google Forms/Sheets"""
     url = "https://docs.google.com/forms/d/e/1FAIpQLSeJjxjL3WoG6NODAhdFS_RVjdHN3KGsIdag9Y71fxsDytyZAQ/formResponse"
     payload = {
         "entry.2042537524": sid, 
@@ -71,24 +65,14 @@ async def start_quiz(
     quarter: str = Form(...),
     year: str = Form(...)
 ):
-    # --- BACKEND VALIDATION ---
     sid = sid.strip()
     if not sid.isdigit() or len(sid) != 9:
         return HTMLResponse("<h1>Invalid Student ID. Must be exactly 9 digits.</h1>", status_code=400)
     
-    if len(name.strip()) < 2:
-        return HTMLResponse("<h1>Please enter a valid Full Name.</h1>", status_code=400)
-
     questions = load_questions()
     return templates.TemplateResponse("quiz.html", {
-        "request": request, 
-        "sid": sid, 
-        "name": name, 
-        "professor": professor,
-        "session": session,
-        "quarter": quarter,
-        "year": year,
-        "questions": questions
+        "request": request, "sid": sid, "name": name, "professor": professor,
+        "session": session, "quarter": quarter, "year": year, "questions": questions
     })
 
 @app.post("/submit", response_class=HTMLResponse)
@@ -102,11 +86,7 @@ async def handle_submit(
     year: str = Form(...)
 ):
     try:
-        # Backend double-check for data integrity
         sid = sid.strip()
-        if not sid.isdigit() or len(sid) != 9:
-            return HTMLResponse("<h1>Data Integrity Error: Invalid SID format.</h1>", status_code=400)
-
         form_data = await request.form()
         questions = load_questions()
         
@@ -117,8 +97,21 @@ async def handle_submit(
         
         points, feedback, cat_scores, status = calculate_results(user_answers, questions)
         
+        # Mapping scores for Database columns (Score out of 5)
+        s_map = {
+            "loops": cat_scores.get("Basic: loop/ for-each", {}).get('correct', 0),
+            "methods": cat_scores.get("Basic: Method/parameter passing", {}).get('correct', 0),
+            "logic": cat_scores.get("Basic: If-else/Boolean zen", {}).get('correct', 0),
+            "arrays": cat_scores.get("Arrays/ArrayList", {}).get('correct', 0),
+            "classes": cat_scores.get("Classes", {}).get('correct', 0),
+            "inheritance": cat_scores.get("Inheritance/interfaces", {}).get('correct', 0),
+            "hashset": cat_scores.get("Java Collections Framework -HashSet", {}).get('correct', 0),
+            "hashmap": cat_scores.get("Java Collections Framework -HashMap", {}).get('correct', 0)
+        }
+
         send_to_google_sheets(sid, name, points, status, professor, session, quarter, year)
         
+        # For ML logic (Score out of 10)
         row_data = {cat: cat_scores.get(cat, {'correct': 0})['correct'] * 2 for cat in FEATURE_COLS}
         recommendations = get_multi_label_prediction(row_data)
 
@@ -126,66 +119,56 @@ async def handle_submit(
         for area in recommendations:
             detailed_recs.append({
                 "topic": area,
-                "summary": CHAPTER_INSIGHTS.get(area, "This foundational topic is essential for upcoming CS211 chapters.")
+                "summary": CHAPTER_INSIGHTS.get(area, "Reviewing this topic will help in CS211.")
             })
 
-        # --- DATABASE LOGIC (Saves Permanently) ---
+        # --- DATABASE LOGIC ---
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
+            # Updated Table Schema with category columns
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS assessment_results (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     sid VARCHAR(50), name VARCHAR(255), professor VARCHAR(255),
                     session VARCHAR(50), quarter VARCHAR(50), year VARCHAR(50),
                     score INT, status VARCHAR(50),
+                    loops INT, methods INT, logic INT, arrays INT, 
+                    classes INT, inheritance INT, hashset INT, hashmap INT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
-            sql = "INSERT INTO assessment_results (sid, name, professor, session, quarter, year, score, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"
-            cursor.execute(sql, (sid, name, professor, session, quarter, year, points, status))
+            sql = """INSERT INTO assessment_results 
+                     (sid, name, professor, session, quarter, year, score, status, 
+                      loops, methods, logic, arrays, classes, inheritance, hashset, hashmap) 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+            
+            cursor.execute(sql, (sid, name, professor, session, quarter, year, points, status,
+                                 s_map['loops'], s_map['methods'], s_map['logic'], s_map['arrays'], 
+                                 s_map['classes'], s_map['inheritance'], s_map['hashset'], s_map['hashmap']))
             conn.commit()
             cursor.close()
             conn.close()
         except Exception as db_e:
             print(f"Database Error: {db_e}")
 
-        # --- TEMP CSV LOGIC (Feeds the AI in logic.py) ---
+        # --- ML Training CSV ---
         training_dict = {cat: row_data[cat] for cat in FEATURE_COLS}
         for cat in FEATURE_COLS:
             training_dict[f"T_{cat}"] = 1 if training_dict[cat] < 8 else 0
         pd.DataFrame([training_dict]).to_csv(CSV_PATH, mode='a', index=False, header=not os.path.exists(CSV_PATH))
 
         return templates.TemplateResponse("result.html", {
-            "request": request, 
-            "points": points, 
-            "status": status, 
-            "cat_scores": cat_scores,
-            "recommendations": detailed_recs,
-            "feedback": feedback
+            "request": request, "points": points, "status": status, 
+            "cat_scores": cat_scores, "recommendations": detailed_recs, "feedback": feedback
         })
         
     except Exception as e:
-        print(f"CRITICAL ERROR: {e}")
         return HTMLResponse(content=f"<html><body><h1>Error: {e}</h1></body></html>", status_code=500)
-    
-@app.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
-
-@app.post("/login")
-async def login_submit(
-    professor: str = Form(...), 
-    key: str = Form(...)
-):
-    from fastapi.responses import RedirectResponse
-    return RedirectResponse(url=f"/dashboard?prof_f={professor}&key={key}", status_code=303)
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(
-    request: Request, 
-    prof_f: str = None, key: str = None,  # type: ignore
-    sess_f: str = None, qtr_f: str = None, yr_f: str = None  # type: ignore
+    request: Request, prof_f: str = None, key: str = None, sess_f: str = None, qtr_f: str = None, yr_f: str = None  # type: ignore
 ):
     if not prof_f or prof_f not in PROFESSOR_KEYS or PROFESSOR_KEYS[prof_f] != key:
         return HTMLResponse(content="<h1>Access Denied</h1>", status_code=403)
@@ -194,39 +177,44 @@ async def dashboard(
         conn = get_db_connection()
         df = pd.read_sql("SELECT * FROM assessment_results", conn)
         conn.close()
-        
         df = df.rename(columns={'name': 'Student_Name', 'score': 'Total_Score', 'professor': 'Professor', 'session': 'Session', 'quarter': 'Quarter', 'year': 'Year'})
-    except Exception:
+        
+        for col in ['Professor', 'Session', 'Quarter', 'Year']:
+            df[col] = df[col].astype(str).str.strip()
+
+        df = df[df['Professor'] == str(prof_f).strip()]
+
+        filters = {
+            "sessions": sorted(df['Session'].unique().tolist()),
+            "quarters": sorted(df['Quarter'].unique().tolist()),
+            "years": sorted(df['Year'].unique().tolist())
+        }
+
+        if sess_f: df = df[df['Session'] == str(sess_f).strip()]
+        if qtr_f: df = df[df['Quarter'] == str(qtr_f).strip()]
+        if yr_f: df = df[df['Year'] == str(yr_f).strip()]
+
+        # Calculation for Chart (Multiply mean by 2 to get score out of 10)
+        averages = {
+            "Basic: loop/ for-each": round(df['loops'].mean() * 2, 1) if not df.empty else 0,
+            "Basic: Method/parameter passing": round(df['methods'].mean() * 2, 1) if not df.empty else 0,
+            "Basic: If-else/Boolean zen": round(df['logic'].mean() * 2, 1) if not df.empty else 0,
+            "Arrays/ArrayList": round(df['arrays'].mean() * 2, 1) if not df.empty else 0,
+            "Classes": round(df['classes'].mean() * 2, 1) if not df.empty else 0,
+            "Inheritance/interfaces": round(df['inheritance'].mean() * 2, 1) if not df.empty else 0,
+            "Java Collections Framework -HashSet": round(df['hashset'].mean() * 2, 1) if not df.empty else 0,
+            "Java Collections Framework -HashMap": round(df['hashmap'].mean() * 2, 1) if not df.empty else 0
+        }
+        recent_students = df[['Student_Name', 'Total_Score']].tail(5).to_dict('records')
+        
         return templates.TemplateResponse("admin.html", {
-            "request": request, "error": "No database data found yet.", "total_students": 0,
-            "averages": {cat: 0 for cat in FEATURE_COLS}, "filters": {"sessions": [], "quarters": [], "years": []},
-            "selections": {"prof": prof_f, "key": key, "sess": sess_f, "qtr": qtr_f, "yr": yr_f}
+            "request": request, "filters": filters, "averages": averages, "recent": recent_students,
+            "selections": {"prof": prof_f, "key": key, "sess": sess_f, "qtr": qtr_f, "yr": yr_f},
+            "total_students": len(df)
         })
-
-    # Data Cleaning for filters
-    for col in ['Professor', 'Session', 'Quarter', 'Year']:
-        df[col] = df[col].astype(str).str.strip()
-
-    df = df[df['Professor'] == str(prof_f).strip()]
-
-    filters = {
-        "sessions": sorted(df['Session'].unique().tolist()),
-        "quarters": sorted(df['Quarter'].unique().tolist()),
-        "years": sorted(df['Year'].unique().tolist())
-    }
-
-    if sess_f: df = df[df['Session'] == str(sess_f).strip()]
-    if qtr_f: df = df[df['Quarter'] == str(qtr_f).strip()]
-    if yr_f: df = df[df['Year'] == str(yr_f).strip()]
-
-    averages = {cat: 0 for cat in FEATURE_COLS} 
-    recent_students = df[['Student_Name', 'Total_Score']].tail(5).to_dict('records') if not df.empty else []
-
-    return templates.TemplateResponse("admin.html", {
-        "request": request, "filters": filters, "averages": averages, "recent": recent_students,
-        "selections": {"prof": prof_f, "key": key, "sess": sess_f, "qtr": qtr_f, "yr": yr_f},
-        "total_students": len(df)
-    })
+    except Exception as e:
+        print(f"Dashboard Error: {e}")
+        return HTMLResponse("Error loading dashboard.")
 
 if __name__ == "__main__":
     import uvicorn
