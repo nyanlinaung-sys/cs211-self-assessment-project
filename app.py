@@ -166,13 +166,14 @@ async def handle_submit(
     except Exception as e:
         return HTMLResponse(content=f"<html><body><h1>Error: {e}</h1></body></html>", status_code=500)
     
-# The POST route that receives the HTML form data
+# THIS SHOWS THE LOGIN PAGE (GET)
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+# THIS HANDLES THE BUTTON CLICK (POST)
 @app.post("/login")
-async def login_submit(
-    professor: str = Form(...), # Matches <select name="professor">
-    key: str = Form(...)        # Matches <input name="key">
-):
-    # This sends the user to the dashboard with the credentials in the URL
+async def login_submit(professor: str = Form(...), key: str = Form(...)):
     return RedirectResponse(url=f"/dashboard?prof_f={professor}&key={key}", status_code=303)
 
 @app.get("/dashboard", response_class=HTMLResponse)
