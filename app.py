@@ -4,11 +4,15 @@ import requests
 import json
 import mysql.connector
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse , RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware # Added for security
 from logic import load_questions, calculate_results, get_multi_label_prediction, CHAPTER_INSIGHTS
 
 app = FastAPI()
+
+# SECURITY: This hides the password from the URL
+app.add_middleware(SessionMiddleware, secret_key="cs211-secret-secure-key-99")
 
 base_dir = os.path.dirname(os.path.abspath(__file__))
 templates = Jinja2Templates(directory=os.path.join(base_dir, "templates"))
@@ -97,7 +101,6 @@ async def handle_submit(
         
         points, feedback, cat_scores, status = calculate_results(user_answers, questions)
         
-        # Mapping scores for Database columns (Score out of 5)
         s_map = {
             "loops": cat_scores.get("Basic: loop/ for-each", {}).get('correct', 0),
             "methods": cat_scores.get("Basic: Method/parameter passing", {}).get('correct', 0),
@@ -111,7 +114,6 @@ async def handle_submit(
 
         send_to_google_sheets(sid, name, points, status, professor, session, quarter, year)
         
-        # For ML logic (Score out of 10)
         row_data = {cat: cat_scores.get(cat, {'correct': 0})['correct'] * 2 for cat in FEATURE_COLS}
         recommendations = get_multi_label_prediction(row_data)
 
@@ -122,11 +124,9 @@ async def handle_submit(
                 "summary": CHAPTER_INSIGHTS.get(area, "Reviewing this topic will help in CS211.")
             })
 
-        # --- DATABASE LOGIC ---
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            # Updated Table Schema with category columns
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS assessment_results (
                     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -152,12 +152,6 @@ async def handle_submit(
         except Exception as db_e:
             print(f"Database Error: {db_e}")
 
-        # --- ML Training CSV ---
-        training_dict = {cat: row_data[cat] for cat in FEATURE_COLS}
-        for cat in FEATURE_COLS:
-            training_dict[f"T_{cat}"] = 1 if training_dict[cat] < 8 else 0
-        pd.DataFrame([training_dict]).to_csv(CSV_PATH, mode='a', index=False, header=not os.path.exists(CSV_PATH))
-
         return templates.TemplateResponse("result.html", {
             "request": request, "points": points, "status": status, 
             "cat_scores": cat_scores, "recommendations": detailed_recs, "feedback": feedback
@@ -165,27 +159,39 @@ async def handle_submit(
         
     except Exception as e:
         return HTMLResponse(content=f"<html><body><h1>Error: {e}</h1></body></html>", status_code=500)
-        
-# 2. The POST route that receives the HTML form data
+
+# 1. This SHOWS the login page (GET)
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+# 2. This HANDLES the login button click (POST)
 @app.post("/login")
-async def login_submit(
-    professor: str = Form(...), # Matches <select name="professor">
-    key: str = Form(...)        # Matches <input name="key">
-):
-    # This sends the user to the dashboard with the credentials in the URL
-    return RedirectResponse(url=f"/dashboard?prof_f={professor}&key={key}", status_code=303)
+async def login_submit(request: Request, professor: str = Form(...), key: str = Form(...)):
+    # Check the password
+    if professor in PROFESSOR_KEYS and PROFESSOR_KEYS[professor] == key:
+        # HIDE the data in a session cookie instead of the URL
+        request.session["user"] = professor 
+        return RedirectResponse(url="/dashboard", status_code=303)
+    
+    return HTMLResponse(content="<h1>Access Denied</h1>", status_code=403)
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(
-    request: Request, prof_f: str = None, key: str = None, sess_f: str = None, qtr_f: str = None, yr_f: str = None  # type: ignore
-):
-    if not prof_f or prof_f not in PROFESSOR_KEYS or PROFESSOR_KEYS[prof_f] != key:
-        return HTMLResponse(content="<h1>Access Denied</h1>", status_code=403)
+async def dashboard(request: Request):
+    prof_f = request.session.get("user")
+    if not prof_f:
+        return RedirectResponse(url="/login")
+
+    # Get filters from URL
+    sess_f = request.query_params.get("sess_f")
+    qtr_f = request.query_params.get("qtr_f")
+    yr_f = request.query_params.get("yr_f")
 
     try:
         conn = get_db_connection()
         df = pd.read_sql("SELECT * FROM assessment_results", conn)
         conn.close()
+        
         df = df.rename(columns={'name': 'Student_Name', 'score': 'Total_Score', 'professor': 'Professor', 'session': 'Session', 'quarter': 'Quarter', 'year': 'Year'})
         
         for col in ['Professor', 'Session', 'Quarter', 'Year']:
@@ -199,11 +205,10 @@ async def dashboard(
             "years": sorted(df['Year'].unique().tolist())
         }
 
-        if sess_f: df = df[df['Session'] == str(sess_f).strip()]
-        if qtr_f: df = df[df['Quarter'] == str(qtr_f).strip()]
-        if yr_f: df = df[df['Year'] == str(yr_f).strip()]
+        if sess_f: df = df[df['Session'] == sess_f.strip()]
+        if qtr_f: df = df[df['Quarter'] == qtr_f.strip()]
+        if yr_f: df = df[df['Year'] == yr_f.strip()]
 
-        # Calculation for Chart (Multiply mean by 2 to get score out of 10)
         averages = {
             "Basic: loop/ for-each": round(df['loops'].mean() * 2, 1) if not df.empty else 0,
             "Basic: Method/parameter passing": round(df['methods'].mean() * 2, 1) if not df.empty else 0,
@@ -218,12 +223,11 @@ async def dashboard(
         
         return templates.TemplateResponse("admin.html", {
             "request": request, "filters": filters, "averages": averages, "recent": recent_students,
-            "selections": {"prof": prof_f, "key": key, "sess": sess_f, "qtr": qtr_f, "yr": yr_f},
+            "selections": {"prof": prof_f, "sess": sess_f, "qtr": qtr_f, "yr": yr_f},
             "total_students": len(df)
         })
     except Exception as e:
-        print(f"Dashboard Error: {e}")
-        return HTMLResponse("Error loading dashboard.")
+        return HTMLResponse(f"Error loading dashboard: {e}")
 
 if __name__ == "__main__":
     import uvicorn
