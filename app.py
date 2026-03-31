@@ -4,7 +4,7 @@ import requests
 import json
 import mysql.connector
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse , RedirectResponse
 from fastapi.templating import Jinja2Templates
 from logic import load_questions, calculate_results, get_multi_label_prediction, CHAPTER_INSIGHTS
 
@@ -165,6 +165,15 @@ async def handle_submit(
         
     except Exception as e:
         return HTMLResponse(content=f"<html><body><h1>Error: {e}</h1></body></html>", status_code=500)
+    
+# The POST route that receives the HTML form data
+@app.post("/login")
+async def login_submit(
+    professor: str = Form(...), # Matches <select name="professor">
+    key: str = Form(...)        # Matches <input name="key">
+):
+    # This sends the user to the dashboard with the credentials in the URL
+    return RedirectResponse(url=f"/dashboard?prof_f={professor}&key={key}", status_code=303)
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(
