@@ -23,8 +23,8 @@
                 <div class="modal-header" style="background-color: #0a2162; color: white; border-top-left-radius: 13px; border-top-right-radius: 13px;">
                     <h5 class="modal-title">Welcome to the CS211 Assessment</h5>
                 </div>
-                <div class="modal-body text-center p-4">
-                    <p>This placement test helps determine your readiness for CS211.</p>
+                <div class="modal-body text-center p4">
+                    <p>This Self-Assessment test helps determine your readiness for CS211.</p>
                     <div class="instruction-list bg-light p-3 rounded">
                         <ul class="mb-0">
                             <li>Ensure you have a stable internet connection.</li>
@@ -41,7 +41,7 @@
     </div>
 
     <div class="main-header shadow">
-        <h1>CS211 Placement Test</h1>
+        <h1>CS211 Self-Assessment Test</h1>
         <h5 class="opacity-75">Department of Computer Science, Bellevue College</h5>
     </div>
 
@@ -59,22 +59,26 @@
             </div>
 
             <div class="mb-3">
-                <label for="professor" class="form-label">Select Your Professor</label>
-                <select class="form-select" id="professor" name="professor" required>
-                    <option value="" selected disabled>Choose your instructor...</option>
+                <label for="professor" class="form-label">Assigned Professor</label>
+                <select class="form-select bg-light" id="professorSelect" name="professor" required
+                        style="pointer-events: none; background-color: #f8f9fa; cursor: not-allowed;">
+                    <option value="" selected disabled>Your instructor...</option>
                     <option value="Taesik Kim">Taesik Kim</option>
+                    <option value="Tanuja Joshi">Tanuja Joshi</option>
+                    <option value="Varik Hoang">Varik Hoang</option>
+                    <option value="Joseph Hueffed">Joseph Hueffed</option>
                 </select>
             </div>
 
             <div class="row">
                 <div class="col-md-4 mb-3">
                     <label class="form-label">Session</label>
-                    <select name="session" class="form-select" required>
+                    <select id="sesssionSelect" name="session" class="form-select" required>
                         <option value="" selected disabled>Choose...</option>
-                        <option value="1">Session 1</option>
-                        <option value="2">Session 2</option>
-                        <option value="3">Session 3</option>
-                        <option value="4">Session 4</option>
+                        <option value="1">AA-LEC (17400)</option>
+                        <option value="2">OA-LEC (17401)</option>
+                        <option value="3">OB-LEC (17402)</option>
+                        <option value="4">OD-LEC (17430)</option>
                     </select>
                 </div>
                 <div class="col-md-4 mb-3">
@@ -89,9 +93,8 @@
                 </div>
                 <div class="col-md-4 mb-3">
                     <label class="form-label">Year</label>
-                    <select name="year" class="form-select" required>
-                        <option value="2026">2026</option>
-                        <option value="2027">2027</option>
+                    <select id="yearSelect" name="year" class="form-select" required 
+                            style="pointer-events: none; background-color: #f8f9fa; cursor: not-allowed;">
                     </select>
                 </div>
             </div>
@@ -103,7 +106,6 @@
         <hr class="mb-4" style="opacity: 0.1;">
         <p class="small">
             &copy; 2026 Bellevue College - Computer Science Department.<br>
-            Developed for the CS211 Placement Assessment Program.
         </p>
     </footer>
 
@@ -113,6 +115,41 @@
         document.addEventListener('DOMContentLoaded', function() {
             var myModal = new bootstrap.Modal(document.getElementById('welcomeModal'));
             myModal.show();
+
+            const sessionSelect = document.getElementById('sesssionSelect');
+            const professorSelect = document.getElementById('professorSelect');
+            const hiddenProfInput = document.getElementById('hiddenProfessor');
+
+            const sessionToProfessors = {
+                '1': ['Taesik Kim'],
+                '2': ['Tanuja Joshi'],
+                '3': ['Varik Hoang'],
+                '4': ['Joseph Hueffed']
+            };
+
+            sessionSelect.addEventListener('change', function() {
+                const assignedProf = sessionToProfessors[this.value];
+                if (assignedProf){
+                    professorSelect.value = assignedProf;
+
+                    // Visual feedback: brief highlight to show it changed
+                    professorSelect.style.border = '2px solid #2563EB';
+                    setTimeout(() => {
+                        professorSelect.style.border = '1px solid #E2E8F0';
+                    }, 1000);
+                }
+                
+            });
+
+            const yearSelect = document.getElementById('yearSelect');
+            const currentYear = new Date().getFullYear();
+
+            const option = document.createElement('option');
+            option.value = currentYear;
+            option.text = currentYear;
+            option.selected = true;
+
+            yearSelect.appendChild(option);
         });
     </script>
 </body>

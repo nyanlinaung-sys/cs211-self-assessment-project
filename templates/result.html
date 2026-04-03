@@ -15,7 +15,10 @@
     </style>
 </head>
 <body class="container pb-5">
-    <div class="result-header shadow {% if status == 'Pass' %}bg-pass{% elif status == 'Reject' %}bg-reject{% else %}bg-review{% endif %}">
+    <div class="result-header shadow
+    {% if status == 'Pass' %} Your knowledge is sufficient to take CS211.
+    {% elif status == 'Reject' %}Your knowledge is not quite sufficient to take CS211.
+    {% else %}You may be able to take CS211, but you’ll need to do more preparation before the quarter starts.{% endif %}">
         <h1>Final Score: {{ points }} / 80</h1>
         <h2>Status: {{ status }}</h2>
     </div>
@@ -94,5 +97,12 @@
             </div>
         </div>
     </div>
+
+    <footer class="text-center mt-5 pb-4 text-muted">
+        <hr class="mb-4" style="opacity: 0.1;">
+        <p class="small">
+            &copy; 2026 Bellevue College - Computer Science Department.<br>
+        </p>
+    </footer>
 </body>
 </html>

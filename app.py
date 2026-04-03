@@ -21,6 +21,9 @@ CSV_PATH = '/tmp/student_training_data.csv'
 
 PROFESSOR_KEYS = {
     "Taesik Kim": "pass123",
+    "Tanuja Joshi": "pass134",
+    "Varik Hoang": "pass145",
+    "Joseph Hueffed": "pass156"
 }
 
 FEATURE_COLS = [
