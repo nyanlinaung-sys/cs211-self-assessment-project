@@ -102,7 +102,7 @@ async def handle_submit(
             ans = form_data.get(f"q_{q['id']}")
             user_answers.append(ans if ans else "")
         
-        points, feedback, cat_scores, status = calculate_results(user_answers, questions)
+        points, recommendations, cat_scores, status = calculate_results(user_answers, questions)
         
         s_map = {
             "loops": cat_scores.get("Basic: loop/ for-each", {}).get('correct', 0),
@@ -156,8 +156,11 @@ async def handle_submit(
             print(f"Database Error: {db_e}")
 
         return templates.TemplateResponse("result.html", {
-            "request": request, "points": points, "status": status, 
-            "cat_scores": cat_scores, "recommendations": detailed_recs, "feedback": feedback
+            "request": request,
+            "points": points,
+            "recommendations": recommendations, # This now contains the JSON tips!
+            "cat_scores": cat_scores,
+            "status": status
         })
         
     except Exception as e:

@@ -30,18 +30,6 @@ PASSING_CONFIG = {
     }
 }
 
-# --- AI-Style Summaries for the Roadmap ---
-CHAPTER_INSIGHTS = {
-    "Basic: loop/ for-each": "Mastering iteration is a core requirement for Ch09 Review, Ch12 Recursion, and Ch13 Complexity Analysis.",
-    "Basic: Method/parameter passing": "Call-stack and parameter logic are the foundation for Ch12 Recursion and Ch17 Binary Trees.",
-    "Java Collections Framework -HashSet": "Understanding Set mechanics is critical for succeeding in Ch13 Search and Ch18 Hashing.",
-    "Arrays/ArrayList": "Efficient array manipulation is a prerequisite for Ch13 Searching and Ch19 Sorting algorithms.",
-    "Classes": "Object references and memory allocation are essential for Ch17 Binary Trees and Ch10 Collections.",
-    "Inheritance/interfaces": "Polymorphism is the core requirement for understanding Ch10 and Ch11 of the Collections Framework.",
-    "Java Collections Framework -HashMap": "Key-value pair logic is the direct precursor to Ch18 Hashing and Map implementations.",
-    "Basic: If-else/Boolean zen": "Boolean logic and conditional flow are vital for Ch12 Recursion and Ch13 Search/Complexity logic."
-}
-
 def load_questions():
     """Standard JSON loader"""
     base_path = os.path.dirname(__file__)
@@ -84,15 +72,23 @@ def check_passing_status(category_scores):
 
 def calculate_results(user_answers, questions):
     raw_correct = 0
-    needs_review = []
-    
     category_scores = {}
+    
+    # Map to store one tip per category from your JSON
+    category_tips = {} 
+
+    # Initialize scores
     for group in PASSING_CONFIG.values():
         for cat in group["categories"]:
             category_scores[cat] = {"correct": 0, "total": 0}
 
     for i, q in enumerate(questions):
         cat = q['category']
+        
+        # Capture the tip for this category if not already stored
+        if cat not in category_tips and 'tip' in q:
+            category_tips[cat] = q['tip']
+            
         if cat in category_scores:
             category_scores[cat]["total"] += 1
             
@@ -100,14 +96,24 @@ def calculate_results(user_answers, questions):
             raw_correct += 1
             category_scores[cat]["correct"] += 1
 
-    for cat, score in category_scores.items():
-        if score["correct"] < score["total"]:
-            needs_review.append(cat)
+    # Prepare data for AI prediction (current points per category)
+    row_data = {cat: score["correct"] * 2 for cat, score in category_scores.items()}
+    
+    # Get the categories the student needs to focus on (from AI or logic)
+    needs_review_categories = get_multi_label_prediction(row_data)
+    
+    # Create the final recommendations list using tips from questions.json
+    recommendations = []
+    for cat in needs_review_categories:
+        recommendations.append({
+            "topic": cat,
+            "summary": category_tips.get(cat, "Review core concepts in this area.") # Fallback text
+        })
                 
     display_points = int(raw_correct * 2)
     status = check_passing_status(category_scores)
     
-    return display_points, needs_review, category_scores, status
+    return display_points, recommendations, category_scores, status
 
 def get_multi_label_prediction(row_data):
     """Predicts focus areas by pulling training data from the AWS RDS Database."""
