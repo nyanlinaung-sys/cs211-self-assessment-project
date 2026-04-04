@@ -83,7 +83,8 @@
                 </div>
                 <div class="col-md-4 mb-3">
                     <label class="form-label">Quarter</label>
-                    <select name="quarter" class="form-select" required>
+                    <select id="quarterSelect" name="quarter" class="form-select" required 
+                            style="pointer-events: none; background-color: #f8f9fa; cursor: not-allowed;">
                         <option value="" selected disabled>Choose...</option>
                         <option value="Spring">Spring</option>
                         <option value="Summer">Summer</option>
@@ -118,39 +119,50 @@
 
             const sessionSelect = document.getElementById('sesssionSelect');
             const professorSelect = document.getElementById('professorSelect');
-            const hiddenProfInput = document.getElementById('hiddenProfessor');
+            const quarterSelect = document.getElementById('quarterSelect');
+            const yearSelect = document.getElementById('yearSelect');
 
+            // Mapping sessions to specific professors (now as strings for better compatibility)
             const sessionToProfessors = {
-                'AA-LEC (17400)': ['Taesik Kim'],
-                'OA-LEC (17401)': ['Tanuja Joshi'],
-                'OB-LEC (17402)': ['Varik Hoang'],
-                'OD-LEC (17430)': ['Joseph Hueffed']
+                'AA-LEC (17400)': 'Taesik Kim',
+                'OA-LEC (17401)': 'Tanuja Joshi',
+                'OB-LEC (17402)': 'Varik Hoang',
+                'OD-LEC (17430)': 'Joseph Hueffed'
             };
 
             sessionSelect.addEventListener('change', function() {
+                // 1. Auto-assign Professor
                 const assignedProf = sessionToProfessors[this.value];
-                if (assignedProf){
+                if (assignedProf) {
                     professorSelect.value = assignedProf;
-
-                    // Visual feedback: brief highlight to show it changed
-                    professorSelect.style.border = '2px solid #2563EB';
-                    setTimeout(() => {
-                        professorSelect.style.border = '1px solid #E2E8F0';
-                    }, 1000);
                 }
-                
+
+                // 2. Auto-assign Quarter based on the current date
+                const month = new Date().getMonth(); // Jan is 0, April is 3
+                let currentQuarter = "";
+
+                if (month >= 0 && month <= 2) currentQuarter = "Winter";      // Jan - March
+                else if (month >= 3 && month <= 5) currentQuarter = "Spring"; // April - June
+                else if (month >= 6 && month <= 8) currentQuarter = "Summer"; // July - Sept
+                else currentQuarter = "Fall";                                 // Oct - Dec
+
+                quarterSelect.value = currentQuarter;
+
+                // Visual feedback: brief highlight for both automated fields
+                [professorSelect, quarterSelect].forEach(el => {
+                    el.style.border = '2px solid #2563EB';
+                    setTimeout(() => {el.style.border = '1px solid #E2E8F0';}, 1000);
+                });
             });
 
-            const yearSelect = document.getElementById('yearSelect');
-            const currentYear = new Date().getFullYear();
-
-            const option = document.createElement('option');
-            option.value = currentYear;
-            option.text = currentYear;
-            option.selected = true;
-
-            yearSelect.appendChild(option);
-        });
+                // Auto-fill the Year
+                const currentYear = new Date().getFullYear();
+                const option = document.createElement('option');
+                option.value = currentYear;
+                option.text = currentYear;
+                option.selected = true;
+                yearSelect.appendChild(option);
+            });
     </script>
 </body>
 </html>
