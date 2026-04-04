@@ -19,9 +19,10 @@
     <div class="result-header shadow
     {% if status == 'Pass' and points >= 60 %}bg-pass
     {% elif status == 'Pass' %}bg-review
-    {% else %}bg-reject{% endif %}">
+    {% else %}bg-reject{% endif %}">    
 
-    <p class="lead mb-3 px-4 fs-4">
+        <h1>Final Score: {{ points }} / 80</h1>
+        <h2 class="lead mb-3 px-4 fs-4">
         {% if status == 'Pass' and points >= 60 %}
             Your knowledge is sufficient to take CS211.
         {% elif status == 'Pass' %}
@@ -29,10 +30,7 @@
         {% else %}
             Your knowledge is not quite sufficient to take CS211.
         {% endif %}
-    </p>
-
-        <h1>Final Score: {{ points }} / 80</h1>
-        <h2>Status: {{ status }}</h2>
+        </h2>
     </div>
 
     <div class="row mt-5">
