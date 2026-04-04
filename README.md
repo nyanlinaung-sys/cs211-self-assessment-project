@@ -1,4 +1,4 @@
-# CS211 Placement Test Project
+# CS211 Self-Assessment Project
 ### Bellevue College - Computer Science Department
 
 This is a production-grade web application designed to assess student readiness for the CS211 course. The project utilizes a **FastAPI** backend and an **AWS RDS (MySQL)** database to provide a robust, persistent architecture for student assessments and real-time instructor analytics.
