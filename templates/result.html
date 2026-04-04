@@ -65,25 +65,33 @@
             <div class="col-md-7">
                 <h3>CS211 Preparation Roadmap</h3>
 
-                {% if status == 'Failed' %}
+                {% if status == "Failed_Requirements" %}
                     <div class="alert alert-danger mt-3 shadow-sm">
                         <h4><i class="bi bi-exclamation-triangle"></i> Action Required</h4>
-                        <p class="mb-0">You did not meet the minimum requirements for CS211. We strongly recommend retaking CS210 or completing an intensive Java review before enrolling.</p>
+                        <p class="mb-0">You did not meet the minimum requirements for CS211. We strongly recommend retaking CS210 or completing an intensive Java review before enrolling CS211.</p>
                     </div>
+
+                {% elif status == "Failed_Score" %}
+                    <div class="alert alert-danger mt-3 shadow-sm">
+                        <h4><i class="bi bi-exclamation-triangle"></i> Action Required</h4>
+                        <p class="mb-0">We strongly recommend retaking CS210 or completing an intensive Java review before enrolling CS211.</p>
+                    </div>
+
                 {% elif points == 80 %}
                     <div class="alert alert-success mt-3 shadow-sm">
                         <h4>🌟 Mastery Achieved</h4>
                         <p>You have a perfect score! You are fully prepared for the challenges of CS211.</p>
                     </div>
+
                 {% else %}
                     <p class="text-muted mb-4">
                         {% if status == 'Advice' %}
                             <strong>Note:</strong> You met absolute minimums, but to succeed in <strong>CS211</strong>, strengthen these areas:
                         {% else %}
-                            Great job! To ensure an 'A' in <strong>CS211</strong>, review these key concepts:
+                            <strong>Note:</strong> Great job! To ensure an 'A' in <strong>CS211</strong>, review these key concepts:
                         {% endif %}
                     </p>
-                    
+        
                     {% for rec in recommendations %}
                         <div class="suggestion-card">
                             <h5 class="text-primary">Focus Area: {{ rec.topic }}</h5>

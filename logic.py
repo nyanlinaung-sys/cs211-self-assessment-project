@@ -42,33 +42,30 @@ def load_questions():
         return []
 
 def check_passing_status(category_scores):
-    # 1. Calculate Total Score first (8 categories * max 10 points = 80 total)
     total_points = sum(score.get("correct", 0) * 2 for score in category_scores.values())
 
-    # 2. Check Absolute Minimums (The "Hard Floor")
-    # If they miss ANY of these, it's an automatic Reject/Failed
+    # 1. Check Absolute Minimums (Hard Floor)
     for group_name, rules in PASSING_CONFIG.items():
         group_points = [category_scores.get(cat, {"correct": 0})["correct"] * 2 for cat in rules["categories"]]
         if not all(p >= rules["abs_min"] for p in group_points):
-            return "Failed"
+            return "Failed_Requirements" # Missed a specific category floor
 
-    # 3. Check High-Score Requirements (The "Pass" Criteria)
+    # 2. Check High-Score Requirements for "Pass"
     meets_all_high_score_rules = True
     for group_name, rules in PASSING_CONFIG.items():
         group_points = [category_scores.get(cat, {"correct": 0})["correct"] * 2 for cat in rules["categories"]]
         high_scores = sum(1 for p in group_points if p >= rules["pass_min"])
-        
         if high_scores < rules["min_pass_count"]:
             meets_all_high_score_rules = False
 
-    # 4. Final Result Assignment based on your Screenshot table
+    # 3. Final Logic
     if total_points >= 60 and meets_all_high_score_rules:
         return "Pass"
     elif total_points >= 48:
-        # Meets absolute minimums and has at least 48 points
         return "Advice"
     else:
-        return "Failed"
+        # Met requirements, but score is 0-47
+        return "Failed_Score"
 
 def calculate_results(user_answers, questions):
     raw_correct = 0
