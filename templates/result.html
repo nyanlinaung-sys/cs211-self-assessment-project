@@ -8,7 +8,7 @@
         body { background-color: #F8FAFC; color: #1E293B; }
         .result-header { padding: 40px; border-radius: 15px; color: white; text-align: center; margin-top: 2rem; }
         .bg-pass { background: linear-gradient(135deg, #059669 0%, #10B981 100%); }
-        .bg-reject { background: linear-gradient(135deg, #991B1B 0%, #EF4444 100%); }
+        .bg-failed { background: linear-gradient(135deg, #991B1B 0%, #EF4444 100%); }
         .bg-review { background: linear-gradient(135deg, #B45309 0%, #F59E0B 100%); }
         
         .suggestion-card { border-left: 5px solid #3B82F6; padding: 20px; background: white; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -19,7 +19,7 @@
     <div class="result-header shadow
     {% if status == 'Pass' and points >= 60 %}bg-pass
     {% elif status == 'Pass' %}bg-review
-    {% else %}bg-reject{% endif %}">    
+    {% else %}bg-failed{% endif %}">    
 
         <h1>Final Score: {{ points }} / 80</h1>
         <h2 class="lead mb-3 px-4 fs-4">
@@ -52,7 +52,7 @@
         <div class="col-md-7">
             <h3>CS211 Preparation Roadmap</h3>
 
-            {% if status == "Reject" %}
+            {% if status == "Failed" %}
                 <div class="alert alert-secondary mt-3">
                     <p class="mb-0">You need to pass at least minimum requirements in all areas. Please review core Java fundamentals.</p>
                 </div>

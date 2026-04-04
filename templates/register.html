@@ -4,8 +4,18 @@
     <title>CS211 Placement</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #F8FAFC; color: #1E293B; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        /* Reduced global font-weight from 700 to 500 for better readability */
+        /* Sticky Footer Setup */
+        html, body { height: 100%; margin: 0; }
+        body { 
+            background-color: #F8FAFC; 
+            color: #1E293B; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-content { flex: 1 0 auto; } /* Pushes footer down */
+
         .main-header {
             background: #0a2162;
             padding: 30px; border-radius: 15px; color: white; text-align: center; margin-top: 2rem;
@@ -13,6 +23,8 @@
         .card { border-radius: 15px; border: 2px solid #E2E8F0; padding: 20px; margin-top: 20px; }
         .btn-primary { background-color: #2563EB; border: none; padding: 10px 25px; font-weight: 600; }
         .instruction-list { text-align: left; margin-top: 15px; }
+        
+        footer { flex-shrink: 0; background: white; border-top: 1px solid #E2E8F0; }
     </style>
 </head>
 <body class="container">
@@ -23,7 +35,7 @@
                 <div class="modal-header" style="background-color: #0a2162; color: white; border-top-left-radius: 13px; border-top-right-radius: 13px;">
                     <h5 class="modal-title">Welcome to the CS211 Assessment</h5>
                 </div>
-                <div class="modal-body text-center p4">
+                <div class="modal-body text-center p-4">
                     <p>This Self-Assessment test helps determine your readiness for CS211.</p>
                     <div class="instruction-list bg-light p-3 rounded">
                         <ul class="mb-0">
@@ -40,74 +52,77 @@
         </div>
     </div>
 
-    <div class="main-header shadow">
-        <h1>CS211 Self-Assessment Test</h1>
-        <h5 class="opacity-75">Department of Computer Science, Bellevue College</h5>
+    <div class="main-content">
+        <div class="main-header shadow">
+            <h1>CS211 Self-Assessment Test</h1>
+            <h5 class="opacity-75">Department of Computer Science, Bellevue College</h5>
+        </div>
+
+        <div class="card shadow-sm mb-5">
+            <h3 class="mb-4">Candidate Registration</h3>
+            <form action="/quiz" method="post">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Student ID (SID)</label>
+                    <input type="text" name="sid" class="form-control" placeholder="9-digit ID (e.g. 202456789)" required inputmode="numeric" pattern="\d{9}" title="Please enter exactly 9 digits for your Student ID">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Full Name</label>
+                    <input type="text" name="name" class="form-control" placeholder="As it appears on your ID" required minlength="2">
+                </div>
+
+                <div class="mb-3">
+                    <label for="professor" class="form-label fw-bold">Assigned Professor</label>
+                    <select class="form-select bg-light" id="professorSelect" name="professor" required
+                            style="pointer-events: none; background-color: #f8f9fa; cursor: not-allowed;">
+                        <option value="" selected disabled>Your instructor...</option>
+                        <option value="Taesik Kim">Taesik Kim</option>
+                        <option value="Tanuja Joshi">Tanuja Joshi</option>
+                        <option value="Varik Hoang">Varik Hoang</option>
+                        <option value="Joseph Hueffed">Joseph Hueffed</option>
+                    </select>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Session</label>
+                        <select id="sesssionSelect" name="session" class="form-select" required>
+                            <option value="" selected disabled>Choose...</option>
+                            <option value="AA-LEC (17400)">AA-LEC (17400)</option>
+                            <option value="OA-LEC (17401)">OA-LEC (17401)</option>
+                            <option value="OB-LEC (17402)">OB-LEC (17402)</option>
+                            <option value="OD-LEC (17430)">OD-LEC (17430)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Quarter</label>
+                        <select id="quarterSelect" name="quarter" class="form-select" required 
+                                style="pointer-events: none; background-color: #f8f9fa; cursor: not-allowed;">
+                            <option value="" selected disabled>Choose...</option>
+                            <option value="Spring">Spring</option>
+                            <option value="Summer">Summer</option>
+                            <option value="Fall">Fall</option>
+                            <option value="Winter">Winter</option>       
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label fw-bold">Year</label>
+                        <select id="yearSelect" name="year" class="form-select" required 
+                                style="pointer-events: none; background-color: #f8f9fa; cursor: not-allowed;">
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 mt-3 py-3 shadow-sm">Start Assessment</button>
+            </form>
+        </div>
     </div>
 
-    <div class="card shadow-sm mb-4">
-        <h3 class="mb-4">Candidate Registration</h3>
-        <form action="/quiz" method="post">
-            <div class="mb-3">
-                <label class="form-label font-weight-bold">Student ID (SID)</label>
-                <input type="text" name="sid" class="form-control" placeholder="9-digit ID (e.g. 202456789)" required inputmode="numeric" pattern="\d{9}" title="Please enter exactly 9 digits for your Student ID">
-            </div>
-            
-            <div class="mb-3">
-                <label class="form-label">Full Name</label>
-                <input type="text" name="name" class="form-control" placeholder="As it appears on your ID" required minlength="2">
-            </div>
-
-            <div class="mb-3">
-                <label for="professor" class="form-label">Assigned Professor</label>
-                <select class="form-select bg-light" id="professorSelect" name="professor" required
-                        style="pointer-events: none; background-color: #f8f9fa; cursor: not-allowed;">
-                    <option value="" selected disabled>Your instructor...</option>
-                    <option value="Taesik Kim">Taesik Kim</option>
-                    <option value="Tanuja Joshi">Tanuja Joshi</option>
-                    <option value="Varik Hoang">Varik Hoang</option>
-                    <option value="Joseph Hueffed">Joseph Hueffed</option>
-                </select>
-            </div>
-
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Session</label>
-                    <select id="sesssionSelect" name="session" class="form-select" required>
-                        <option value="" selected disabled>Choose...</option>
-                        <option value="AA-LEC (17400)">AA-LEC (17400)</option>
-                        <option value="OA-LEC (17401)">OA-LEC (17401)</option>
-                        <option value="OB-LEC (17402)">OB-LEC (17402)</option>
-                        <option value="OD-LEC (17430)">OD-LEC (17430)</option>
-                    </select>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Quarter</label>
-                    <select id="quarterSelect" name="quarter" class="form-select" required 
-                            style="pointer-events: none; background-color: #f8f9fa; cursor: not-allowed;">
-                        <option value="" selected disabled>Choose...</option>
-                        <option value="Spring">Spring</option>
-                        <option value="Summer">Summer</option>
-                        <option value="Fall">Fall</option>
-                        <option value="Winter">Winter</option>       
-                    </select>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label class="form-label">Year</label>
-                    <select id="yearSelect" name="year" class="form-select" required 
-                            style="pointer-events: none; background-color: #f8f9fa; cursor: not-allowed;">
-                    </select>
-                </div>
-            </div>
-            <button type="submit" class="btn btn-primary w-100 mt-3 py-3">Start Assessment</button>
-        </form>
-    </div>
-
-    <footer class="text-center mt-5 pb-4 text-muted">
-        <hr class="mb-4" style="opacity: 0.1;">
-        <p class="small">
-            &copy; 2026 Bellevue College - Computer Science Department.<br>
-        </p>
+    <footer class="text-center py-4 text-muted mt-auto">
+        <div class="container">
+            <p class="small mb-0">
+                &copy; 2026 <strong>Bellevue College</strong> &bull; Computer Science Department
+            </p>
+        </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -122,7 +137,6 @@
             const quarterSelect = document.getElementById('quarterSelect');
             const yearSelect = document.getElementById('yearSelect');
 
-            // Mapping sessions to specific professors (now as strings for better compatibility)
             const sessionToProfessors = {
                 'AA-LEC (17400)': 'Taesik Kim',
                 'OA-LEC (17401)': 'Tanuja Joshi',
@@ -131,38 +145,34 @@
             };
 
             sessionSelect.addEventListener('change', function() {
-                // 1. Auto-assign Professor
                 const assignedProf = sessionToProfessors[this.value];
                 if (assignedProf) {
                     professorSelect.value = assignedProf;
                 }
 
-                // 2. Auto-assign Quarter based on the current date
-                const month = new Date().getMonth(); // Jan is 0, April is 3
+                const month = new Date().getMonth(); 
                 let currentQuarter = "";
 
-                if (month >= 0 && month <= 2) currentQuarter = "Winter";      // Jan - March
-                else if (month >= 3 && month <= 5) currentQuarter = "Spring"; // April - June
-                else if (month >= 6 && month <= 8) currentQuarter = "Summer"; // July - Sept
-                else currentQuarter = "Fall";                                 // Oct - Dec
+                if (month >= 0 && month <= 2) currentQuarter = "Winter";
+                else if (month >= 3 && month <= 5) currentQuarter = "Spring";
+                else if (month >= 6 && month <= 8) currentQuarter = "Summer";
+                else currentQuarter = "Fall";
 
                 quarterSelect.value = currentQuarter;
 
-                // Visual feedback: brief highlight for both automated fields
                 [professorSelect, quarterSelect].forEach(el => {
                     el.style.border = '2px solid #2563EB';
                     setTimeout(() => {el.style.border = '1px solid #E2E8F0';}, 1000);
                 });
             });
 
-                // Auto-fill the Year
-                const currentYear = new Date().getFullYear();
-                const option = document.createElement('option');
-                option.value = currentYear;
-                option.text = currentYear;
-                option.selected = true;
-                yearSelect.appendChild(option);
-            });
+            const currentYear = new Date().getFullYear();
+            const option = document.createElement('option');
+            option.value = currentYear;
+            option.text = currentYear;
+            option.selected = true;
+            yearSelect.appendChild(option);
+        });
     </script>
 </body>
 </html>
