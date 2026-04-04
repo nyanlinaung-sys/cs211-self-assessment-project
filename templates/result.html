@@ -5,90 +5,111 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        body { background-color: #F8FAFC; color: #1E293B; }
+        /* Sticky Footer Setup */
+        html, body { height: 100%; margin: 0; }
+        body { 
+            background-color: #F8FAFC; 
+            color: #1E293B; 
+            display: flex; 
+            flex-direction: column; 
+        }
+        
+        .main-wrapper { flex: 1 0 auto; padding-bottom: 3rem; }
+
         .result-header { padding: 40px; border-radius: 15px; color: white; text-align: center; margin-top: 2rem; }
         .bg-pass { background: linear-gradient(135deg, #059669 0%, #10B981 100%); }
         .bg-failed { background: linear-gradient(135deg, #991B1B 0%, #EF4444 100%); }
         .bg-review { background: linear-gradient(135deg, #B45309 0%, #F59E0B 100%); }
         
         .suggestion-card { border-left: 5px solid #3B82F6; padding: 20px; background: white; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .relevance-badge { background-color: #DBEAFE; color: #1E40AF; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; margin-right: 5px; }
+        
+        footer { flex-shrink: 0; background: white; border-top: 1px solid #E2E8F0; }
     </style>
 </head>
-<body class="container pb-5">
-    <div class="result-header shadow
-        {% if status == 'Pass' %}bg-pass
-        {% elif status == 'Advice' %}bg-review
-        {% else %}bg-failed{% endif %}">    
+<body class="container">
 
-        <h1>Final Score: {{ points }} / 80</h1>
-        <h2 class="lead mb-3 px-4 fs-4">
-        {% if status == 'Pass' %}
-            Your knowledge is sufficient to take CS211.
-        {% elif status == 'Advice' %}
-            You may be able to take CS211, but you’ll need to do more preparation before the quarter starts.
-        {% else %}
-            Your knowledge is not quite sufficient to take CS211. Please review core Java fundamentals.
-        {% endif %}
-        </h2>
-    </div>
+    <div class="main-wrapper">
+        <div class="result-header shadow
+            {% if status == 'Pass' %}bg-pass
+            {% elif status == 'Advice' %}bg-review
+            {% else %}bg-failed{% endif %}">    
 
-    <div class="row mt-5">
-        <div class="col-md-5">
-            <h3 class="mb-4">Category Scores</h3>
-            {% for cat, score in cat_scores.items() %}
-            <div class="mb-3">
-                <div class="d-flex justify-content-between">
-                    <strong>{{ cat }}</strong>
-                    <span>{{ score.correct }}/{{ score.total }}</span>
-                </div>
-                <div class="progress" style="height: 10px;">
-                    <div class="progress-bar bg-primary" style="width: {{ (score.correct / score.total) * 100 }}%"></div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        <div class="col-md-7">
-    <h3>CS211 Preparation Roadmap</h3>
-
-    {% if status == "Failed" %}
-        <div class="alert alert-danger mt-3">
-            <h4><i class="bi bi-exclamation-triangle"></i> Action Required</h4>
-            <p class="mb-0">You did not meet the minimum requirements for CS211. We strongly recommend retaking CS210 or completing a intensive Java review before enrolling.</p>
-        </div>
-    {% elif points == 80 %}
-        <div class="alert alert-success mt-3">
-            <h4>🌟 Mastery Achieved</h4>
-            <p>You have a perfect score! You are fully prepared for the challenges of CS211.</p>
-        </div>
-    {% else %}
-        <p class="text-muted mb-4">
-            {% if status == 'Advice' %}
-                <strong>Note:</strong> You met the absolute minimums, but to succeed in <strong>CS211</strong>, you must strengthen these specific areas:
+            <h1>Final Score: {{ points }} / 80</h1>
+            <h2 class="lead mb-3 px-4 fs-4">
+            {% if status == 'Pass' %}
+                Your knowledge is sufficient to take CS211.
+            {% elif status == 'Advice' %}
+                You may be able to take CS211, but you’ll need to do more preparation before the quarter starts.
             {% else %}
-                Great job! To ensure an 'A' in <strong>CS211</strong>, review these key concepts:
+                Your knowledge is not quite sufficient to take CS211. Please review core Java fundamentals.
             {% endif %}
-        </p>
-        
-        {% for rec in recommendations %}
-            <div class="suggestion-card">
-                <h5 class="text-primary">Focus Area: {{ rec.topic }}</h5>
-                <p class="text-dark border-top pt-2" style="font-size: 0.95rem;">
-                    <i class="bi bi-info-circle text-primary"></i> 
-                    {{ rec.summary }}
-                </p>
+            </h2>
+        </div>
+
+        <div class="row mt-5">
+            <div class="col-md-5">
+                <h3 class="mb-4">Category Scores</h3>
+                {% for cat, score in cat_scores.items() %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <strong style="font-size: 0.9rem;">{{ cat }}</strong>
+                        <span>{{ score.correct * 2 }} / 10 pts</span>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-primary" style="width: {{ (score.correct / 5) * 100 }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
-        {% endfor %}
-    {% endif %}
 
-    <div class="mt-4">
-        <a href="/" class="btn btn-outline-primary w-100">Back to Home</a>
-    </div>
+            <div class="col-md-7">
+                <h3>CS211 Preparation Roadmap</h3>
+
+                {% if status == "Reject" %}
+                    <div class="alert alert-danger mt-3 shadow-sm">
+                        <h4><i class="bi bi-exclamation-triangle"></i> Action Required</h4>
+                        <p class="mb-0">You did not meet the minimum requirements for CS211. We strongly recommend retaking CS210 or completing an intensive Java review before enrolling.</p>
+                    </div>
+                {% elif points == 80 %}
+                    <div class="alert alert-success mt-3 shadow-sm">
+                        <h4>🌟 Mastery Achieved</h4>
+                        <p>You have a perfect score! You are fully prepared for the challenges of CS211.</p>
+                    </div>
+                {% else %}
+                    <p class="text-muted mb-4">
+                        {% if status == 'Advice' %}
+                            <strong>Note:</strong> You met absolute minimums, but to succeed in <strong>CS211</strong>, strengthen these areas:
+                        {% else %}
+                            Great job! To ensure an 'A' in <strong>CS211</strong>, review these key concepts:
+                        {% endif %}
+                    </p>
+                    
+                    {% for rec in recommendations %}
+                        <div class="suggestion-card">
+                            <h5 class="text-primary">Focus Area: {{ rec.topic }}</h5>
+                            <p class="text-dark border-top pt-2" style="font-size: 0.95rem;">
+                                <i class="bi bi-info-circle text-primary"></i> 
+                                {{ rec.summary }}
+                            </p>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <div class="mt-4">
+                    <a href="/" class="btn btn-outline-primary w-100">Back to Home</a>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <footer class="text-center mt-auto py-5 text-muted">
-        <hr class="mx-auto mb-4" style="opacity: 0.1; width: 50%;">
-        <p class="small mb-0">&copy; 2026 Bellevue College - Computer Science Department  </p>
+    <footer class="text-center py-4 text-muted mt-auto">
+        <div class="container">
+            <p class="small mb-0">
+                &copy; 2026 <strong>Bellevue College</strong> &bull; Computer Science Department
+            </p>
+        </div>
     </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
