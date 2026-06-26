@@ -22,7 +22,7 @@ PROFESSOR_KEYS = {
     "Taesik Kim": "pass123",
     "Tanuja Joshi": "pass134",
     "Varik Hoang": "pass145",
-    "Joseph Hueffed": "pass156"
+    "Joseph Hueffed": "pass4"
 }
 
 FEATURE_COLS = [
