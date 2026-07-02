@@ -23,7 +23,8 @@ PROFESSOR_KEYS = {
     "Tanuja Joshi": "tj211",
     "Varik Hoang": "vh211",
     "Joseph Hueffed": "jh211",
-    "Test-Kim": "000"
+    "Garth Scheck": "gs211",
+    "Xiao Li": "xl211"
 }
 
 FEATURE_COLS = [
