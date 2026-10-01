@@ -1,48 +1,104 @@
-# CS211 Self-Assessment Project
-### Bellevue College - Computer Science Department
+# CS211 Self-Assessment Tool
 
-This is a production-grade web application designed to assess student readiness for the CS211 course. The project utilizes a **FastAPI** backend and an **AWS RDS (MySQL)** database to provide a robust, persistent architecture for student assessments and real-time instructor analytics.
+A web app that helps Bellevue College Computer Science students check their readiness for CS211 (Java) and gives instructors a live view of how a class is doing.
 
-## 🚀 Features
-* **Secure Registration:** Collects Student ID, Name, and specific course metadata with an integrated **Welcome Modal** for student instructions.
-* **Data Validation:** Strict **9-digit numeric validation** for Student IDs (Frontend & Backend) to ensure data integrity and prevent SQL errors.
-* **Multi-Step Assessment:** Interactive quiz covering 8 core Java categories including Loops, OOP, Collections, and Interfaces.
-* **AI Study Recommendations:** Utilizes a **Multi-Output Decision Tree Classifier** to identify mastery gaps. The model trains dynamically using historical data stored in the RDS instance.
-* **Instructor Dashboard:** A secured analytics portal for professors to view class averages, filter by quarter/session, and track recent submissions.
-* **Cloud Persistence:** * **AWS RDS (MySQL):** Permanent storage for all student attempts and metadata.
-    * **Google Sheets Sync:** Secondary automatic backup via Google Forms API for redundancy.
+Students answer a short quiz across 8 Java topics. A machine learning model flags the topics they are weakest in and recommends what to study. Instructors log in to a dashboard that shows class averages and topic mastery.
 
-## 🛠️ Technical Stack
-* **Backend:** FastAPI (Python 3.x), Uvicorn
-* **Database:** AWS RDS (MySQL)
-* **Frontend:** Jinja2 Templates, Bootstrap 5, JavaScript (Modals & Pattern Validation)
-* **Machine Learning:** Scikit-learn (Decision Tree), Pandas
-* **Deployment:** AWS App Runner (Containerized)
+Built for the Bellevue College Computer Science Department placement assessment program.
 
-## 📊 Instructor Dashboard & Security
-The dashboard is protected by a login system defined in `app.py`. Professors can access filtered analytics specific to their own students.
-* **Login Route:** `/login`
-* **Features:** Real-time calculation of category mastery and a "Recent Submissions" table.
-* **Filtering:** Robust filtering logic for Sessions, Quarters, and Years that handles data stripping and case sensitivity.
+![Student assessment](images/quiz.png)
 
-## 💻 Local Setup
-1.  **Clone the repository.**
-2.  **Configure Environment Variables:**
-    Set `DB_HOST`, `DB_USER`, `DB_PASS`, and `DB_NAME` in your local environment.
-3.  **Install dependencies:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-4.  **Run the application:**
-    ```bash
-    python app.py
-    ```
+## What it does
 
-## 📦 AWS Deployment Notes (CRITICAL)
-This application is optimized for **AWS App Runner**.
-* **Inbound Rules:** Ensure the RDS Security Group allows inbound traffic on **Port 3306** from the App Runner service.
-* **Statelessness:** While the `/tmp/` directory is used for temporary ML training files, the **RDS Database** serves as the primary source of truth for all persistent data.
-* **Environment Variables:** All `DB_` variables must be explicitly defined in the App Runner service configuration to allow the application to connect to the MySQL instance.
+**For students**
+- Register with a Student ID, name, and course details. A welcome message explains how the assessment works.
+- Take a multi-step quiz covering 8 core Java categories, including loops, OOP, collections, and interfaces.
+- Get study recommendations based on the topics where they need the most practice.
 
----
-*Developed for the Bellevue College Computer Science Department Placement Assessment Program.*
+**For instructors**
+- Log in to a protected dashboard.
+- See class averages and mastery for each topic.
+- Filter results by quarter, session, and year.
+- Review a table of recent submissions.
+
+![Instructor dashboard](images/dashboard.png)
+
+## How the recommendations work
+
+1. Every attempt is saved to a MySQL database on AWS RDS.
+2. The app loads past attempts with pandas and trains a **multi-output decision tree classifier** (scikit-learn) that predicts mastery for each topic at once.
+3. When a student finishes the quiz, the model identifies their weak topics and returns study recommendations.
+
+Because training uses the stored attempts, the model can improve as more students take the assessment.
+
+![Results and recommendations](images/results.png)
+
+## Data quality
+
+- Student IDs must be exactly 9 digits. This is checked in the browser and again on the server, so bad input never reaches the database.
+- Instructor-side filters clean up whitespace and letter case before matching, so "Fall", "fall", and " fall " all select the same data.
+- Results are stored in AWS RDS (MySQL) as the source of truth. A secondary backup is also sent to Google Sheets.
+
+## Tech stack
+
+| Area | Tools |
+|---|---|
+| Backend | Python, FastAPI, Uvicorn |
+| Database | AWS RDS (MySQL) |
+| Machine learning | scikit-learn (decision tree), pandas |
+| Frontend | Jinja2 templates, Bootstrap 5, JavaScript |
+| Deployment | AWS App Runner (containerized) |
+
+## Project structure
+
+```
+app.py             FastAPI app, routes, login, dashboard
+logic.py           Assessment scoring and recommendation logic
+questions.json     Quiz questions for the 8 Java topics
+templates/         HTML templates
+images/            Screenshots used in this README
+requirements.txt   Python dependencies
+```
+
+## Run it locally
+
+You need Python 3.9+ and access to a MySQL database.
+
+```bash
+git clone https://github.com/nyanlinaung-sys/cs211-self-assessment-project.git
+cd cs211-self-assessment-project
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Set your database settings as environment variables (do not commit them):
+
+```bash
+export DB_HOST=your_host
+export DB_USER=your_user
+export DB_PASS=your_password
+export DB_NAME=your_database
+```
+
+Run the app:
+
+```bash
+python app.py
+```
+
+## Deploy on AWS App Runner
+
+1. Allow inbound traffic on **port 3306** in the RDS security group from the App Runner service.
+2. Add `DB_HOST`, `DB_USER`, `DB_PASS`, and `DB_NAME` to the App Runner service configuration.
+3. The app is stateless. It uses `/tmp/` only for temporary model files, and the RDS database holds all permanent data.
+
+## Possible improvements
+
+- Report model accuracy on a held-out test set.
+- Add charts for topic mastery trends across quarters.
+- Add automated tests for scoring and validation logic.
+
+## Author
+
+Nyan Lin Aung | [GitHub](https://github.com/nyanlinaung-sys) | [Portfolio](https://nyanlinaung.com)
